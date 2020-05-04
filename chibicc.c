@@ -171,7 +171,7 @@ Node *unary();
 Node *expr() {
 	Node *node = mul();
 
-	for(;;) {
+	while(true) {
 		if(consume('+')) {
 			node = new_node(ND_ADD, node, mul());
 		} else if(consume('-')) {
@@ -185,7 +185,7 @@ Node *expr() {
 Node *mul() {
 	Node *node = unary();
 
-	for(;;) {
+	while(true) {
 		if(consume('*')) {
 			node = new_node(ND_MUL, node, primary());
 		} else if(consume('/')) {
