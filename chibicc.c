@@ -5,6 +5,23 @@
 #include<stdlib.h>
 #include<string.h>
 
+// input
+char *user_input;
+
+// エラー箇所を報告する
+void error_at(char *loc, char *fmt, ...) {
+	va_list ap;
+	va_start(ap, fmt);
+
+	int pos = loc - user_input;
+	fprintf(stderr, "%s\n", user_input);
+	fprintf(stderr, "%*s", pos, ""); // pos個の空白を出力
+	fprintf(stderr, "^ ");
+	vfprintf(stderr, fmt, ap);
+	fprintf(stderr, "\n");
+	exit(1);
+} 
+
 // kinds of token
 typedef enum {
 	TK_RESERVED, // symbol
@@ -50,7 +67,7 @@ bool consume(char op) {
 // それ以外の場合にはエラーを返す.
 void expect(char op) {
 	if(token->kind != TK_RESERVED || token->str[0] != op) {
-		error("not '%c'.", op);
+		error_at(token->str, "not '%c'.", op);
 	}
 	token = token->next;
 }
@@ -59,7 +76,7 @@ void expect(char op) {
 // それ以外の場合にはエラーを報告する.
 int expect_number() {
 	if(token->kind != TK_NUM) {
-		error("Not Number.");
+		error_at(token->str, "Not Number.");
 	}
 	int val = token->val;
 	token = token->next;
@@ -102,7 +119,7 @@ Token *tokenize(char *p) {
 			continue;
 		}
 
-		error("can not tokenize.");
+		error_at(cur->str, "can not tokenize.");
 	}
 
 	new_token(TK_EOF, cur, p);
@@ -115,8 +132,9 @@ int main(int argc, char**argv) {
 		return 1;
 	}
 
+	user_input = argv[1];
 	// tokenizer
-	token = tokenize(argv[1]);
+	token = tokenize(user_input);
 
 	// アセンブリの前半部分を出力
 	printf(".intel_syntax noprefix\n");
