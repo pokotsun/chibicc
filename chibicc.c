@@ -8,7 +8,6 @@
 // input
 char *user_input;
 
-
 // エラー箇所を報告する
 void error_at(char *loc, char *fmt, ...) {
 	va_list ap;
@@ -132,12 +131,6 @@ Token *tokenize(char *p) {
 			cur = new_token(TK_RESERVED, cur, p++, 1);
 			continue;
 		}
-		// if( *p == '+' || *p == '-' || 
-		// 	*p == '*' || *p == '/' || 
-		// 	*p == '(' || *p == ')') {
-		// 	cur = new_token(TK_RESERVED, cur, p++);
-		// 	continue;
-		// }
 
 		// Integer literal
 		if(isdigit(*p)) {
@@ -204,17 +197,6 @@ Node *unary();
 // expr = equality
 Node *expr() {
 	return equality();
-	// Node *node = mul();
-
-	// while(true) {
-	// 	if(consume('+')) {
-	// 		node = new_node(ND_ADD, node, mul());
-	// 	} else if(consume('-')) {
-	// 		node = new_node(ND_SUB, node, mul());
-	// 	} else {
-	// 		return node;
-	// 	}
-	// }
 }
 
 // equality = relational ("==" relational | "!=" relational)*
@@ -304,7 +286,6 @@ Node *primary() {
 
 	return new_node_num(expect_number());
 }
-
 
 void gen(Node *node) {
 	if(node->kind == ND_NUM) {
