@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -28,9 +29,10 @@ struct Token {
 };
 
 static void error(char *fmt, ...);
+void error_at(char *loc, char *fmt, ...);
+void error_tok(Token *tok, char *fmt, ...);
 static Token *new_token(TokenKind kind, Token *cur, char *str, int len); 
 static bool startswitch(char *p, char *q);
-void error_at(char *loc, char *fmt, ...);
 Token *tokenize(char *p);
 
 
@@ -44,15 +46,17 @@ typedef enum {
 	ND_NE,  // !=
 	ND_LT,  // <
 	ND_LE,  // <=
-	ND_NUM, // number 
+    ND_EXPR_STMT, // Expression statement
+	ND_NUM, // Integer
 } NodeKind;
 
 // AST node type 
 typedef struct Node Node;
 struct Node {
-	NodeKind kind; // ノードの型
-	Node *lhs; // 左辺
-	Node *rhs; // 右辺
+	NodeKind kind; // Node kind
+    Node *next; // next Node
+	Node *lhs; // Left-hand side
+	Node *rhs; // Right-hand side
 	int val; // kindがND_NUMの場合のみ使う
 };
 

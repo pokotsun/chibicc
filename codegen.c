@@ -1,5 +1,13 @@
 #include "chibicc.h"
 
+static char *reg(int idx) {
+    static char *r[] = {"r10", "r11", "r12", "r13", "r14", "r15"};
+    if(idx < 0 || sizeof(r) / sizeof(*r) <= idx) {
+        error("Register out of range: %d", idx);
+    }
+    return r[idx];
+}
+
 static void gen_expr(Node *node) {
 	if(node->kind == ND_NUM) {
 		printf("  push %d\n", node->val);
