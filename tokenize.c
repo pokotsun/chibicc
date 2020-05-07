@@ -1,11 +1,10 @@
 #include "chibicc.h"
 
-// input
-static char *user_input;
+char *user_input;
 
 // エラーを報告するための関数
 // printfと同じ引数を取る
-static void error(char *fmt, ...) {
+void error(char *fmt, ...) {
 	va_list ap;
 	va_start(ap, fmt);
 	vfprintf(stderr, fmt, ap);
@@ -67,7 +66,6 @@ static bool startswitch(char *p, char *q) {
 
 // 入力文字列pをトークナイズしてそれを返す
 Token *tokenize(char *p) {
-    user_input = p;
 
 	Token head;
 	head.next = NULL;

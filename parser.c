@@ -1,4 +1,5 @@
 #include "chibicc.h"
+Token *token;
 
 // current focused token 
 Token *token;
@@ -53,8 +54,7 @@ static Node *new_node_num(int val) {
 }
 
 // expr = equality
-Node *expr(Token *tok) {
-    token = tok;
+Node *expr() {
 	return equality();
 }
 
@@ -138,7 +138,7 @@ static Node *unary() {
 static Node *primary() {
 	// 次のトークンが"("なら, "(" expr ")"のはず
 	if(consume("(")) {
-		Node *node = expr(token);
+		Node *node = expr();
 		expect(")");
 		return node;
 	}

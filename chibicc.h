@@ -28,7 +28,7 @@ struct Token {
 	int len; // トークンの長さ
 };
 
-static void error(char *fmt, ...);
+void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
 void error_tok(Token *tok, char *fmt, ...);
 static Token *new_token(TokenKind kind, Token *cur, char *str, int len); 
@@ -60,10 +60,13 @@ struct Node {
 	int val; // kindがND_NUMの場合のみ使う
 };
 
+extern Token *token;
+extern char *user_input;
+
 //
 // parser.c
 //
-Node *expr(Token *token);
+Node *expr();
 static Node *equality();
 static Node *relational();
 static Node *add();

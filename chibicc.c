@@ -1,4 +1,5 @@
 #include "chibicc.h"
+Token *token;
 
 int main(int argc, char**argv) {
 	if(argc != 2) {
@@ -7,8 +8,8 @@ int main(int argc, char**argv) {
 	}
 
 	// tokenizer
-	Token *tok = tokenize(argv[1]);
-	Node *node = expr(tok);
+	token = tokenize(argv[1]);
+	Node *node = expr();
 	code_gen(node);
 
 	return 0;
