@@ -1,13 +1,13 @@
 #include "chibicc.h"
 
-void gen(Node *node) {
+static void gen_expr(Node *node) {
 	if(node->kind == ND_NUM) {
 		printf("  push %d\n", node->val);
 		return;
 	}
 
-	gen(node->lhs);
-	gen(node->rhs);
+	gen_expr(node->lhs);
+	gen_expr(node->rhs);
 
 	printf("  pop rdi\n");
 	printf("  pop rax\n");
@@ -49,4 +49,19 @@ void gen(Node *node) {
 	}
 
 	printf("  push rax\n");
+}
+
+void code_gen(Node *node) {
+	// アセンブリの前半部分を出力
+	printf(".intel_syntax noprefix\n");
+	printf(".global main\n");
+	printf("main:\n");
+
+	gen_expr(node);
+
+	// スタックトップに式全体の値が残っているはずなので
+	// それをRAXにpopして関数からの返り値とする
+	printf("  pop rax\n");
+
+	printf("  ret\n");
 }

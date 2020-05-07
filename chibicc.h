@@ -70,5 +70,5 @@ Node *unary();
 
 //
 // codegen.c
-// 
-void gen(Node *node);
+//
+void code_gen(Node *node);
