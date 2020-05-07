@@ -33,3 +33,30 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len);
 bool startswitch(char *p, char *q);
 Token *tokenize(char *p);
 
+
+// 抽象構文木のノードの種類
+typedef enum {
+	ND_ADD, // +
+	ND_SUB, // -
+	ND_MUL, // *
+	ND_DIV, // /
+	ND_EQ,  // ==
+	ND_NE,  // !=
+	ND_LT,  // <
+	ND_LE,  // <=
+	ND_NUM, // number 
+} NodeKind;
+
+// AST node type 
+typedef struct Node Node;
+struct Node {
+	NodeKind kind; // ノードの型
+	Node *lhs; // 左辺
+	Node *rhs; // 右辺
+	int val; // kindがND_NUMの場合のみ使う
+};
+
+//
+// codegen.c
+// 
+void gen(Node *node);
