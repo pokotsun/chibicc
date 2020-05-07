@@ -57,6 +57,18 @@ struct Node {
 };
 
 //
+// parser.c
+//
+Node *expr(Token *token);
+Node *equality();
+Node *relational();
+Node *add();
+Node *mul();
+Node *primary();
+Node *unary();
+
+
+//
 // codegen.c
 // 
 void gen(Node *node);
