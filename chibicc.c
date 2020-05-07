@@ -1,58 +1,7 @@
-#include<ctype.h>
-#include<stdarg.h>
-#include<stdbool.h>
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
-
-// input
-char *user_input;
-
-// エラー箇所を報告する
-void error_at(char *loc, char *fmt, ...) {
-	va_list ap;
-	va_start(ap, fmt);
-
-	int pos = loc - user_input;
-	fprintf(stderr, "%s\n", user_input);
-	fprintf(stderr, "%*s", pos, ""); // pos個の空白を出力
-	fprintf(stderr, "^ ");
-	vfprintf(stderr, fmt, ap);
-	fprintf(stderr, "\n");
-	exit(1);
-} 
-
-// kinds of token
-typedef enum {
-	TK_RESERVED, // 予約語(演算子とか)
-	TK_NUM, // number token
-	TK_EOF, // end of input
-} TokenKind;
-
-typedef struct Token Token;
-
-
-// token type
-struct Token {
-	TokenKind kind; // token type
-	Token *next; // next input token
-	int val; // kindがTK_NUMの場合, その数値
-	char *str; // トークン文字列
-	int len; // トークンの長さ
-};
+#include "chibicc.h"
 
 // current focused token 
 Token *token;
-
-// エラーを報告するための関数
-// printfと同じ引数を取る
-void error(char *fmt, ...) {
-	va_list ap;
-	va_start(ap, fmt);
-	vfprintf(stderr, fmt, ap);
-	fprintf(stderr, "\n");
-	exit(1);
-}
 
 // 次のトークンが期待している記号の時には, トークンを1つ読み進めて
 // 真を返す. それ以外の場合には偽を返す.
@@ -90,62 +39,6 @@ int expect_number() {
 
 bool at_eof() {
 	return token->kind == TK_EOF;
-}
-
-// 新しいトークンを作成してcurに繋げる
-Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
-	Token *tok = calloc(1, sizeof(Token));
-	tok->kind = kind;
-	tok->str = str;
-	tok->len = len;
-	cur->next = tok;
-	return tok;
-}
-
-bool startswitch(char *p, char *q) {
-	return memcmp(p, q, strlen(q)) == 0;
-}
-
-// 入力文字列pをトークナイズしてそれを返す
-Token *tokenize(char *p) {
-	Token head;
-	head.next = NULL;
-	Token *cur = &head;
-
-	while(*p) {
-		if(isspace(*p)) {
-			p++;
-			continue;
-		}
-
-		// Multi-letter punctuator
-		if(startswitch(p, "==") || startswitch(p, "!=") ||
-		   startswitch(p, "<=") || startswitch(p, ">=")) {
-			cur = new_token(TK_RESERVED, cur, p, 2);
-			p += 2;
-			continue;
-		}
-
-		// Single-letter punctuator
-		if (strchr("+-*/()<>", *p)) {
-			cur = new_token(TK_RESERVED, cur, p++, 1);
-			continue;
-		}
-
-		// Integer literal
-		if(isdigit(*p)) {
-			cur = new_token(TK_NUM, cur, p, 0);
-			char *q = p;
-			cur->val = strtol(p, &p, 10);
-			cur->len = p - q;
-			continue;
-		}
-
-		error_at(cur->str, "can not tokenize.");
-	}
-
-	new_token(TK_EOF, cur, p, 0);
-	return head.next;
 }
 
 // 抽象構文木のノードの種類
@@ -344,9 +237,8 @@ int main(int argc, char**argv) {
 		return 1;
 	}
 
-	user_input = argv[1];
 	// tokenizer
-	token = tokenize(user_input);
+	token = tokenize(argv[1]);
 	Node *node = expr();
 
 	// アセンブリの前半部分を出力
