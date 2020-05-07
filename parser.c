@@ -5,7 +5,7 @@ Token *token;
 
 // 次のトークンが期待している記号の時には, トークンを1つ読み進めて
 // 真を返す. それ以外の場合には偽を返す.
-bool consume(char *op) {
+static bool consume(char *op) {
 	if(token->kind != TK_RESERVED ||
 		strlen(op) != token->len ||
 		memcmp(token->str, op, token->len)) {
@@ -17,7 +17,7 @@ bool consume(char *op) {
 
 // 次のトークンが期待している記号の時には, トークンを1つ読み進める
 // それ以外の場合にはエラーを返す.
-void expect(char *op) {
+static void expect(char *op) {
 	if(token->kind != TK_RESERVED ||
 		strlen(op) != token->len ||
 		memcmp(token->str, op, token->len)) {
@@ -28,7 +28,7 @@ void expect(char *op) {
 
 // 次のトークンが数値の場合, トークンを1つ読み進めてその数値を返す.
 // それ以外の場合にはエラーを報告する.
-int expect_number() {
+static int expect_number() {
 	if(token->kind != TK_NUM) {
 		error_at(token->str, "Not Number.");
 	}
@@ -37,7 +37,7 @@ int expect_number() {
 	return val;
 }
 
-Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
+static Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
 	Node *node = calloc(1, sizeof(Node));
 	node->kind = kind;
 	node->lhs = lhs;
@@ -45,7 +45,7 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
 	return node;
 }
 
-Node *new_node_num(int val) {
+static Node *new_node_num(int val) {
 	Node *node = calloc(1, sizeof(Node));
 	node->kind = ND_NUM;
 	node->val = val;
@@ -59,7 +59,7 @@ Node *expr(Token *tok) {
 }
 
 // equality = relational ("==" relational | "!=" relational)*
-Node *equality() {
+static Node *equality() {
 	Node *node = relational();
 
 	while(true) {
@@ -74,7 +74,7 @@ Node *equality() {
 }
 
 // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
-Node *relational() {
+static Node *relational() {
 	Node *node = add();
 
 	while(true) {
@@ -93,7 +93,7 @@ Node *relational() {
 }
 
 // add = mul ("+" mul | "-" mul)*
-Node *add() {
+static Node *add() {
 	Node *node = mul();
 
 	while(true) {
@@ -108,7 +108,7 @@ Node *add() {
 }
 
 // mul = unary("*" unary | "/" unary)*
-Node *mul() {
+static Node *mul() {
 	Node *node = unary();
 
 	while(true) {
@@ -124,7 +124,7 @@ Node *mul() {
 
 // unary = ("+" | "-")? unary
 //			| primary
-Node *unary() {
+static Node *unary() {
 	if(consume("+")) {
 		return unary();
 	}
@@ -135,7 +135,7 @@ Node *unary() {
 }
 
 // primary = "(" expr ")" | num
-Node *primary() {
+static Node *primary() {
 	// 次のトークンが"("なら, "(" expr ")"のはず
 	if(consume("(")) {
 		Node *node = expr(token);

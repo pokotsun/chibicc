@@ -5,7 +5,7 @@ static char *user_input;
 
 // エラーを報告するための関数
 // printfと同じ引数を取る
-void error(char *fmt, ...) {
+static void error(char *fmt, ...) {
 	va_list ap;
 	va_start(ap, fmt);
 	vfprintf(stderr, fmt, ap);
@@ -28,7 +28,7 @@ void error_at(char *loc, char *fmt, ...) {
 } 
 
 // 新しいトークンを作成してcurに繋げる
-Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
+static Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
 	Token *tok = calloc(1, sizeof(Token));
 	tok->kind = kind;
 	tok->str = str;
@@ -37,7 +37,7 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
 	return tok;
 }
 
-bool startswitch(char *p, char *q) {
+static bool startswitch(char *p, char *q) {
 	return memcmp(p, q, strlen(q)) == 0;
 }
 

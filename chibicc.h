@@ -27,10 +27,10 @@ struct Token {
 	int len; // トークンの長さ
 };
 
-void error(char *fmt, ...);
+static void error(char *fmt, ...);
+static Token *new_token(TokenKind kind, Token *cur, char *str, int len); 
+static bool startswitch(char *p, char *q);
 void error_at(char *loc, char *fmt, ...);
-Token *new_token(TokenKind kind, Token *cur, char *str, int len); 
-bool startswitch(char *p, char *q);
 Token *tokenize(char *p);
 
 
@@ -60,12 +60,12 @@ struct Node {
 // parser.c
 //
 Node *expr(Token *token);
-Node *equality();
-Node *relational();
-Node *add();
-Node *mul();
-Node *primary();
-Node *unary();
+static Node *equality();
+static Node *relational();
+static Node *add();
+static Node *mul();
+static Node *primary();
+static Node *unary();
 
 
 //
