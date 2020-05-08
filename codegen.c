@@ -1,18 +1,22 @@
 #include "chibicc.h"
 
-static char *reg(int idx) {
-    static char *r[] = {"r10", "r11", "r12", "r13", "r14", "r15"};
-    if(idx < 0 || sizeof(r) / sizeof(*r) <= idx) {
-        error("Register out of range: %d", idx);
-    }
-    return r[idx];
-}
-
 static void gen_expr(Node *node) {
 	if(node->kind == ND_NUM) {
 		printf("  push %d\n", node->val);
 		return;
 	}
+
+    switch(node->kind) {
+        case ND_NUM:
+            printf("  push %d\n", node->val);
+            return;
+        case ND_RETURN:
+            gen_expr(node->lhs);
+            // これまでと同じくraxにpopしてからreturnする
+            printf("  pop rax\n");
+            printf("  ret\n");
+            return;
+    }
 
 	gen_expr(node->lhs);
 	gen_expr(node->rhs);

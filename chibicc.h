@@ -33,7 +33,7 @@ void error_at(char *loc, char *fmt, ...);
 void error_tok(Token *tok, char *fmt, ...);
 static Token *new_token(TokenKind kind, Token *cur, char *str, int len); 
 static bool startswitch(char *p, char *q);
-Token *tokenize(char *p);
+Token *tokenize();
 
 
 // 抽象構文木のノードの種類
@@ -47,6 +47,7 @@ typedef enum {
 	ND_LT,  // <
 	ND_LE,  // <=
     ND_EXPR_STMT, // Expression statement
+    ND_RETURN, // "return"
 	ND_NUM, // Integer
 } NodeKind;
 
@@ -66,6 +67,7 @@ extern char *user_input;
 //
 // parser.c
 //
+
 Node *program();
 static Node *stmt();
 static Node *expr();
