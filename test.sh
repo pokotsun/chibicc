@@ -17,7 +17,7 @@ assert() {
 }
 
 assert 0 "return 0;"
-assert 42 "42;"
+assert 42 "return 42;"
 assert 21 "5+20-4;"
 assert 41 " 12 + 34 - 5 ;"
 assert 47 "5+6*7;" 
@@ -45,7 +45,10 @@ assert 0 "1>2;"
 assert 1 "1>=0;"
 assert 1 "1>=1;"
 assert 0 "1>=2;"
-assert 3 "1; 2; 3;"
+
+assert 1 "return 1; 2; 3;"
+assert 2 "1; return 2; 3;"
+assert 3 "1; 2; return 3;"
 
 echo OK
 
