@@ -66,14 +66,15 @@ extern char *user_input;
 //
 // parser.c
 //
-Node *expr();
+Node *program();
+static Node *stmt();
+static Node *expr();
 static Node *equality();
 static Node *relational();
 static Node *add();
 static Node *mul();
 static Node *primary();
 static Node *unary();
-
 
 //
 // codegen.c

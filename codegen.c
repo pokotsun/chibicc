@@ -65,11 +65,13 @@ void code_gen(Node *node) {
 	printf(".global main\n");
 	printf("main:\n");
 
-	gen_expr(node);
+    for(Node *n=node; n; n=n->next) {
+        gen_expr(n);
+        // スタックトップに式全体の値が残っているはずなので
+        // それをRAXにpopして関数からの返り値とする
+        printf("  pop rax\n");
+    }
 
-	// スタックトップに式全体の値が残っているはずなので
-	// それをRAXにpopして関数からの返り値とする
-	printf("  pop rax\n");
 
 	printf("  ret\n");
 }

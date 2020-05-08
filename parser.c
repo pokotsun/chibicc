@@ -1,5 +1,4 @@
 #include "chibicc.h"
-Token *token;
 
 // current focused token 
 Token *token;
@@ -38,6 +37,10 @@ static int expect_number() {
 	return val;
 }
 
+static bool at_eof() {
+    return token->kind == TK_EOF;
+}
+
 static Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
 	Node *node = calloc(1, sizeof(Node));
 	node->kind = kind;
@@ -53,8 +56,28 @@ static Node *new_node_num(int val) {
 	return node;
 }
 
+// program = stmt*
+Node *program() {
+    Node head = {};
+    Node *cur = &head;
+
+    while(!at_eof()) {
+        cur->next = stmt();
+        cur = cur->next;
+    }
+
+    return head.next;
+}
+
+// stmt = expr ";"
+static Node *stmt() {
+    Node *node = expr();
+    expect(";");
+    return node;
+}
+
 // expr = equality
-Node *expr() {
+static Node *expr() {
 	return equality();
 }
 
