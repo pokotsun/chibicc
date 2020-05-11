@@ -82,6 +82,16 @@ static Node *new_var_node(char name) {
         return node;
 }
 
+static Node *stmt();
+static Node *expr();
+static Node *assign();
+static Node *equality();
+static Node *relational();
+static Node *add();
+static Node *mul();
+static Node *primary();
+static Node *unary();
+
 // program = stmt*
 Node *program() {
     Node head = {};

@@ -32,8 +32,6 @@ struct Token {
 void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
 void error_tok(Token *tok, char *fmt, ...);
-static Token *new_token(TokenKind kind, Token *cur, char *str, int len); 
-static bool startswitch(char *p, char *q);
 Token *tokenize();
 
 
@@ -73,15 +71,6 @@ extern char *user_input;
 //
 
 Node *program();
-static Node *stmt();
-static Node *expr();
-static Node *assign();
-static Node *equality();
-static Node *relational();
-static Node *add();
-static Node *mul();
-static Node *primary();
-static Node *unary();
 
 //
 // codegen.c
