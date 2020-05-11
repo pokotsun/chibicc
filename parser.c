@@ -15,6 +15,15 @@ static bool consume(char *op) {
 	return true;
 }
 
+static Token *consume_ident() {
+    if(token->kind != TK_IDENT) {
+        return NULL;
+    }
+    Token *t = token;
+    token = token->next;
+    return t;
+}
+
 // 次のトークンが期待している記号の時には, トークンを1つ読み進める
 // それ以外の場合にはエラーを返す.
 static void expect(char *op) {
@@ -41,7 +50,7 @@ static bool at_eof() {
     return token->kind == TK_EOF;
 }
 
-
+// generate new template node
 static Node *new_node(NodeKind kind) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = kind;
@@ -61,10 +70,16 @@ static Node *new_unary(NodeKind kind, Node *expr) {
     return node;
 }
 
-static Node *new_node_num(int val) {
+static Node *new_num(int val) {
     Node *node = new_node(ND_NUM);
 	node->val = val;
 	return node;
+}
+
+static Node *new_var_node(char name) {
+        Node *node = new_node(ND_VAR);
+        node->name = name;
+        return node;
 }
 
 // program = stmt*
@@ -94,9 +109,18 @@ static Node *stmt() {
     return node;
 }
 
-// expr = equality
+// expr = assign
 static Node *expr() {
-	return equality();
+    return assign();
+}
+
+// assign = equality ("=" assign)?
+static Node *assign() {
+    Node *node = equality();
+    if(consume("=")) {
+        node = new_binary(ND_ASSIGN, node, assign());
+    }
+    return node;
 }
 
 // equality = relational ("==" relational | "!=" relational)*
@@ -170,12 +194,12 @@ static Node *unary() {
 		return unary();
 	}
 	else if(consume("-")) {
-		return new_binary(ND_SUB, new_node_num(0), unary());
+		return new_binary(ND_SUB, new_num(0), unary());
 	}
 	return primary();
 }
 
-// primary = "(" expr ")" | num
+// primary = "(" expr ")" | ident | num
 static Node *primary() {
 	// 次のトークンが"("なら, "(" expr ")"のはず
 	if(consume("(")) {
@@ -184,5 +208,10 @@ static Node *primary() {
 		return node;
 	}
 
-	return new_node_num(expect_number());
+    Token *tok = consume_ident();
+    if(tok) {
+        return new_var_node(*tok->str);
+    }
+
+	return new_num(expect_number());
 }

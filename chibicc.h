@@ -13,6 +13,7 @@
 // kinds of token
 typedef enum {
 	TK_RESERVED, // 予約語(演算子とか)
+    TK_IDENT, // Identifiers
 	TK_NUM, // number token
 	TK_EOF, // end of input
 } TokenKind;
@@ -46,8 +47,10 @@ typedef enum {
 	ND_NE,  // !=
 	ND_LT,  // <
 	ND_LE,  // <=
+    ND_ASSIGN, // =
     ND_RETURN, // "return"
     ND_EXPR_STMT, // Expression statement
+    ND_VAR, // Variable
 	ND_NUM, // Integer
 } NodeKind;
 
@@ -58,6 +61,7 @@ struct Node {
     Node *next; // next Node
 	Node *lhs; // Left-hand side
 	Node *rhs; // Right-hand side
+    char name; // 変数の時だけ使う
 	int val; // kindがND_NUMの場合のみ使う
 };
 
@@ -71,6 +75,7 @@ extern char *user_input;
 Node *program();
 static Node *stmt();
 static Node *expr();
+static Node *assign();
 static Node *equality();
 static Node *relational();
 static Node *add();

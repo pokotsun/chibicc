@@ -19,7 +19,7 @@ void error_at(char *loc, char *fmt, ...) {
 
 	int pos = loc - user_input;
 	fprintf(stderr, "%s\n", user_input);
-	fprintf(stderr, "%*s", pos, ""); // pos個の空白を出力
+	fprintf(stderr, "%*s", pos+1, ""); // pos個の空白を出力
 	fprintf(stderr, "^ ");
 	vfprintf(stderr, fmt, ap);
 	fprintf(stderr, "\n");
@@ -67,6 +67,11 @@ Token *tokenize() {
 			continue;
 		}
 
+		// Identifier
+		if('a' <= *p && *p <= 'z') {
+			cur = new_token(TK_IDENT, cur, p++, 1);
+			continue;
+		}
 
 		// Multi-letter punctuator
 		if(startswitch(p, "==") || startswitch(p, "!=") ||
@@ -78,7 +83,7 @@ Token *tokenize() {
 
 		// Single-letter punctuator
 		// if(ispunct(*p)) {
-		if (strchr("+-*/()<>;", *p)) {
+		if (strchr("+-*/()<>;=", *p)) {
 			cur = new_token(TK_RESERVED, cur, p++, 1);
 			continue;
 		}

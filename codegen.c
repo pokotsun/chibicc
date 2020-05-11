@@ -1,33 +1,72 @@
 #include "chibicc.h"
 
-static void gen_expr(Node *node) {
+static void gen_addr(Node *node) {
+    if(node->kind == ND_VAR) {
+        // [a-z]の26文字変数が用意される前提
+        int offset = (node->name - 'a' + 1) * 8;
+        // [rbp-%d] アドレスの値をraxに入れる
+        printf("  lea rax, [rbp-%d]\n", offset);
+        printf("  push rax\n");
+        return;
+    }
+
+    error("not an lvalue");
+}
+
+static void load() {
+    printf("  pop rax\n");
+    printf("  mov rax, [rax]\n");
+    printf("  push rax\n");
+}
+
+// store data to variable
+static void store() {
+    printf("  pop rdi\n");
+    printf("  pop rax\n");
+    printf("  mov [rax], rdi\n");
+    printf("  push rdi\n");
+}
+
+// generate code for a given node
+static void gen(Node *node) {
 	if(node->kind == ND_NUM) {
 		printf("  push %d\n", node->val);
 		return;
 	}
 
+    // gen statement stack上に値を残さない
     switch(node->kind) {
         case ND_NUM:
             printf("  push %d\n", node->val);
             return;
+        case ND_VAR:
+            gen_addr(node);
+            load();
+            return;
+        case ND_ASSIGN:
+            gen_addr(node->lhs);
+            gen(node->rhs);
+            store();
+            return;
         case ND_EXPR_STMT:
-            gen_expr(node->lhs);
+            gen(node->lhs);
             printf("  add rsp, 8\n");
             return;
         case ND_RETURN:
-            gen_expr(node->lhs);
-            // これまでと同じくraxにpopしてからreturnする
+            gen(node->lhs);
+            // raxにpopしてから呼び出し元に戻る
             printf("  pop rax\n");
-            printf("  ret\n");
+            printf("  jmp .L.return\n");
             return;
     }
 
-	gen_expr(node->lhs);
-	gen_expr(node->rhs);
+	gen(node->lhs);
+	gen(node->rhs);
 
 	printf("  pop rdi\n");
 	printf("  pop rax\n");
 
+    // gen expression stack上に値を1つ残す
 	switch (node->kind) {
 		case ND_ADD:
 			printf("  add rax, rdi\n");
@@ -73,9 +112,19 @@ void code_gen(Node *node) {
 	printf(".global main\n");
 	printf("main:\n");
 
+    // Prologue
+    printf("  push rbp\n");
+    printf("  mov rbp, rsp\n");
+    printf("  sub rsp, 208\n"); // main関数用に目一杯取っておく
+
     for(Node *n=node; n; n=n->next) {
-        gen_expr(n);
+        gen(n);
     }
+
+    // Epilogue
+    printf(".L.return:\n");
+    printf("  mov rsp, rbp\n");
+    printf("  pop rbp\n");
 
 	printf("  ret\n");
 }
