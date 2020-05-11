@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
@@ -34,6 +35,13 @@ void error_at(char *loc, char *fmt, ...);
 void error_tok(Token *tok, char *fmt, ...);
 Token *tokenize();
 
+// Local variable
+typedef struct Var Var;
+struct Var {
+    Var *next;
+    char *name; // Variable name
+    int offset; // Offset from RBP based current func
+};
 
 // 抽象構文木のノードの種類
 typedef enum {
@@ -59,7 +67,7 @@ struct Node {
     Node *next; // next Node
 	Node *lhs; // Left-hand side
 	Node *rhs; // Right-hand side
-    char name; // 変数の時だけ使う
+    Var *var; // 変数の時だけ使う
 	int val; // kindがND_NUMの場合のみ使う
 };
 
@@ -70,9 +78,15 @@ extern char *user_input;
 // parser.c
 //
 
-Node *program();
+typedef struct Function Function;
+struct Function {
+    Node *node;
+    Var *locals;
+    int stack_size;
+};
+Function *program();
 
 //
 // codegen.c
 //
-void code_gen(Node *node);
+void codegen(Function *prog);

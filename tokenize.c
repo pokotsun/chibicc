@@ -45,7 +45,7 @@ static bool is_alpha(char c) {
 }
 
 static bool is_alnum(char c) {
-	return is_alpha(c) || ('0' <= c && c<= '0');
+	return is_alpha(c) || ('0' <= c && c<= '9');
 }
 
 // 入力文字列pをトークナイズしてそれを返す
@@ -68,8 +68,12 @@ Token *tokenize() {
 		}
 
 		// Identifier
-		if('a' <= *p && *p <= 'z') {
-			cur = new_token(TK_IDENT, cur, p++, 1);
+		if(is_alpha(*p)) {
+			char *q = p++;
+			while(is_alnum(*p)) {
+				p++;
+			}
+			cur = new_token(TK_IDENT, cur, q, p - q);
 			continue;
 		}
 

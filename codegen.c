@@ -2,10 +2,8 @@
 
 static void gen_addr(Node *node) {
     if(node->kind == ND_VAR) {
-        // [a-z]の26文字変数が用意される前提
-        int offset = (node->name - 'a' + 1) * 8;
         // [rbp-%d] アドレスの値をraxに入れる
-        printf("  lea rax, [rbp-%d]\n", offset);
+        printf("  lea rax, [rbp-%d]\n", node->var->offset);
         printf("  push rax\n");
         return;
     }
@@ -106,7 +104,7 @@ static void gen(Node *node) {
 	printf("  push rax\n");
 }
 
-void code_gen(Node *node) {
+void codegen(Function *prog) {
 	// アセンブリの前半部分を出力
 	printf(".intel_syntax noprefix\n");
 	printf(".global main\n");
@@ -115,10 +113,12 @@ void code_gen(Node *node) {
     // Prologue
     printf("  push rbp\n");
     printf("  mov rbp, rsp\n");
-    printf("  sub rsp, 208\n"); // main関数用に目一杯取っておく
+    printf("  sub rsp, %d\n", prog->stack_size); // main関数内のlocal変数の領域を確保
 
-    for(Node *n=node; n; n=n->next) {
-        gen(n);
+    // Emit Code
+    // gen for each statement;
+    for(Node *node=prog->node; node; node=node->next) {
+        gen(node);
     }
 
     // Epilogue

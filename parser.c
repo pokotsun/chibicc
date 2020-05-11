@@ -1,5 +1,19 @@
 #include "chibicc.h"
 
+// All local variable instances created during parsing are
+// accumulated to this list
+Var *locals;
+
+// Find a local variable by name.
+static Var *find_var(Token *tok) {
+    for(Var *var = locals; var; var=var->next) {
+        if(strlen(var->name) == tok->len && !memcmp(tok->str, var->name, tok->len)) {
+            return var;
+        }
+    }
+    return NULL;
+}
+
 // current focused token 
 Token *token;
 
@@ -76,10 +90,19 @@ static Node *new_num(int val) {
 	return node;
 }
 
-static Node *new_var_node(char name) {
-        Node *node = new_node(ND_VAR);
-        node->name = name;
-        return node;
+static Node *new_var_node(Var *var) {
+    Node *node = new_node(ND_VAR);
+    node->var = var;
+    return node;
+}
+
+// assign new variable
+static Var *new_lvar(char *name) {
+    Var *var = calloc(1, sizeof(Var));
+    var->next = locals;
+    var->name = name;
+    locals = var;
+    return var;
 }
 
 static Node *stmt();
@@ -93,7 +116,9 @@ static Node *primary();
 static Node *unary();
 
 // program = stmt*
-Node *program() {
+Function *program() {
+    locals = NULL;
+
     Node head = {};
     Node *cur = &head;
 
@@ -102,7 +127,10 @@ Node *program() {
         cur = cur->next;
     }
 
-    return head.next;
+    Function *prog = calloc(1, sizeof(Function));
+    prog->node = head.next;
+    prog->locals = locals;
+    return prog;
 }
 
 // stmt = "return" expr ";"
@@ -219,8 +247,14 @@ static Node *primary() {
 	}
 
     Token *tok = consume_ident();
+
     if(tok) {
-        return new_var_node(*tok->str);
+        Var *var = find_var(tok);
+        if(!var) {
+            // strndup(str, len): assign copy string of str.slice(0 until len)
+            var = new_lvar(strndup(tok->str, tok->len));
+        }
+        return new_var_node(var);
     }
 
 	return new_num(expect_number());
