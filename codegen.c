@@ -10,6 +10,10 @@ static void gen_expr(Node *node) {
         case ND_NUM:
             printf("  push %d\n", node->val);
             return;
+        case ND_EXPR_STMT:
+            gen_expr(node->lhs);
+            printf("  add rsp, 8\n");
+            return;
         case ND_RETURN:
             gen_expr(node->lhs);
             // これまでと同じくraxにpopしてからreturnする
@@ -71,11 +75,7 @@ void code_gen(Node *node) {
 
     for(Node *n=node; n; n=n->next) {
         gen_expr(n);
-        // スタックトップに式全体の値が残っているはずなので
-        // それをRAXにpopして関数からの返り値とする
-        printf("  pop rax\n");
     }
-
 
 	printf("  ret\n");
 }
