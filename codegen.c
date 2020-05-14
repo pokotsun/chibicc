@@ -1,5 +1,7 @@
 #include "chibicc.h"
 
+static int labelseq = 1; // ラベルのindex
+
 static void gen_addr(Node *node) {
     if(node->kind == ND_VAR) {
         // [rbp-%d] アドレスの値をraxに入れる
@@ -46,6 +48,28 @@ static void gen(Node *node) {
             gen(node->rhs);
             store();
             return;
+        case ND_IF: {
+            int seq = labelseq++;
+            if(node->els) {
+                gen(node->cond);
+                printf("  pop rax\n");
+                printf("  cmp rax, 0\n");
+                printf("  je .L.else.%d\n", seq);
+                gen(node->then);
+                printf("  jmp .L.end.%d\n", seq);
+                printf(".L.else.%d:\n", seq);
+                gen(node->els);
+                printf(".L.end.%d:\n", seq);
+            } else {
+				gen(node->cond);
+				printf("  pop rax\n");
+				printf("  cmp rax, 0\n");
+				printf("  je  .L.end.%d\n", seq);
+				gen(node->then);
+				printf(".L.end.%d:\n", seq);
+            }
+            return;
+        }
         case ND_EXPR_STMT:
             gen(node->lhs);
             printf("  add rsp, 8\n");
