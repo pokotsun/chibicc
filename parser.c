@@ -133,6 +133,12 @@ Function *program() {
     return prog;
 }
 
+/*
+ expr(式): 必ず1つの値をstackに残す(ex. +, variable)
+ stmt(文): stackに何も残さない(rspの位置を変えない) (ex. while, for, if) 
+ exprをstmtとして扱うためにexpr_stmtにexprを入れておき, expr_stmtを実行した後には
+ stackの中身を一つ取り出すようにしておく.
+*/
 static Node *read_expr_stmt() {
     return new_unary(ND_EXPR_STMT, expr());
 }
