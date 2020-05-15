@@ -139,11 +139,21 @@ static Node *read_expr_stmt() {
 
 // stmt = "return" expr ";"
 //      | "if" "(" expr ")" stmt ("else" stmt)?
+//      | "while" "(" expr ")" stmt
 //      | expr ";"
 static Node *stmt() {
     if(consume("return")) {
         Node *node = new_unary(ND_RETURN, expr());
         expect(";");
+        return node;
+    }
+
+    if(consume("while")) {
+        Node *node = new_node(ND_WHILE);
+        expect("(");
+        node->cond = expr();
+        expect(")");
+        node->then = stmt();
         return node;
     }
 
