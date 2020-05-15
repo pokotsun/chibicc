@@ -107,6 +107,11 @@ static void gen(Node *node) {
 			// 式を評価した結果を捨てるためにstackを戻す
             printf("  add rsp, 8\n");
             return;
+		case ND_BLOCK:
+			for(Node *n = node->body; n; n=n->next) {
+				gen(n);
+			}
+            return;
         case ND_RETURN:
             gen(node->lhs);
             // raxにpopしてから呼び出し元に戻る

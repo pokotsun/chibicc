@@ -75,6 +75,7 @@ Token *tokenize() {
 	char *p = user_input;
 	Token head = {};
 	Token *cur = &head;
+    cur->str = p;
 
 	while(*p) {
 		if(isspace(*p)) {
@@ -103,7 +104,7 @@ Token *tokenize() {
 
 		// Single-letter punctuator
 		// if(ispunct(*p)) {
-		if (strchr("+-*/()<>;=", *p)) {
+		if (strchr("+-*/()<>;={}", *p)) {
 			cur = new_token(TK_RESERVED, cur, p++, 1);
 			continue;
 		}
