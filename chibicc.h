@@ -86,6 +86,7 @@ struct Node {
 
 	// Function call
 	char *funcname;
+	Node *args;
 
     Var *var; // 変数の時だけ使う
 	int val; // kindがND_NUMの場合のみ使う

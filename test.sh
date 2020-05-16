@@ -3,6 +3,9 @@
 cat <<EOF | gcc -xc -c -o tmp2.o -
 int ret3() { return 3; }
 int ret5() { return 5; }
+int add(int x, int y) { return x+y; }
+int sub(int x, int y) { return x-y; }
+int add6(int a, int b, int c, int d, int e, int f) { return a + b + c + d + e + f; }
 EOF
 
 assert() {
@@ -80,7 +83,12 @@ assert 3 "for(;;) return 3; return 5;"
 assert 3 "{1; {2;} return 3;}"
 assert 55 "i=0; j=0; while(i<=10) { j=i+j; i=i+1; } return j;"
 
+# function call
 assert 3 "return ret3();"
 assert 5 "return ret5();"
+assert 8 "return add(3, 5);"
+assert 2 "return sub(5, 3);"
+assert 21 "return add6(1, 2, 3, 4, 5, 6);"
+assert 6 "return add(1, add(2, 3));"
 
 echo OK
