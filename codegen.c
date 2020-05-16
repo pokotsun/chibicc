@@ -122,7 +122,24 @@ static void gen(Node *node) {
             for(int i=nargs-1; i>=0; i--) {
                 printf("  pop %s\n", argreg[i]);
             }
+
+            // We need to align RSP to a 16 byte boundary because it is ABI!
+            // RAX is set to 0 for variadict function.
+            int seq = labelseq++;
+            printf("  mov rax, rsp\n");
+            // 0でない場合jump
+            // 16で割り切れない <- 15とANDをとって0にならない
+            printf("  and rax, 15\n");
+            printf("  jnz .L.call.%d\n", seq);
+            // printf("  mov rax, 0\n");
             printf("  call %s\n", node->funcname);
+            printf("  jmp .L.end.%d\n", seq);
+            printf(".L.call.%d:\n", seq);
+            printf("  sub rsp, 8\n"); // padding to align 16 byte boundary
+            // printf("  mov rax, 0\n");
+            printf("  call %s\n", node->funcname);
+            printf("  add rsp, 8\n"); // remove padding
+            printf(".L.end.%d:\n", seq);
             printf("  push rax\n");
             return;
         }
