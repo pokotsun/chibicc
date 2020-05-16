@@ -60,6 +60,17 @@ static int expect_number() {
 	return val;
 }
 
+// Ensure that the current token is TK_IDENT.
+// and return TK_IDENT name.
+static char *expect_ident() {
+    if(token->kind != TK_IDENT) {
+        error_at(token->str, "expected an identifier.");
+    }
+    char *s = strndup(token->str, token->len);
+    token = token->next;
+    return s;
+}
+
 static bool at_eof() {
     return token->kind == TK_EOF;
 }
@@ -105,6 +116,7 @@ static Var *new_lvar(char *name) {
     return var;
 }
 
+static Function *function();
 static Node *stmt();
 static Node *expr();
 static Node *assign();
@@ -115,22 +127,40 @@ static Node *mul();
 static Node *primary();
 static Node *unary();
 
-// program = stmt*
+// program = function*
 Function *program() {
+    Function head = {};
+    Function *cur = &head;
+
+    while(!at_eof()) {
+        cur->next = function();
+        cur = cur->next;
+    }
+    return head.next;
+}
+
+// function = ident "(" ")" "{" stmt* "}"
+static Function *function() {
     locals = NULL;
+
+    char *name = expect_ident(); // get func name
+    expect("(");
+    expect(")");
+    expect("{");
 
     Node head = {};
     Node *cur = &head;
 
-    while(!at_eof()) {
+    while(!consume("}")) {
         cur->next = stmt();
         cur = cur->next;
     }
 
-    Function *prog = calloc(1, sizeof(Function));
-    prog->node = head.next;
-    prog->locals = locals;
-    return prog;
+    Function *fn = calloc(1, sizeof(Function));
+    fn->name = name;
+    fn->node = head.next;
+    fn->locals = locals;
+    return fn;
 }
 
 /*

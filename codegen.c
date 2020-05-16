@@ -1,6 +1,8 @@
 #include "chibicc.h"
 
 static int labelseq = 1; // ラベルのindex
+static char *funcname;
+
 static char *argreg[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
 static void gen_addr(Node *node) {
@@ -131,12 +133,12 @@ static void gen(Node *node) {
             // 16で割り切れない <- 15とANDをとって0にならない
             printf("  and rax, 15\n");
             printf("  jnz .L.call.%d\n", seq);
-            // printf("  mov rax, 0\n");
+            printf("  mov rax, 0\n"); // 0にしておかないと次の関数を呼ぶときのノイズになる
             printf("  call %s\n", node->funcname);
             printf("  jmp .L.end.%d\n", seq);
             printf(".L.call.%d:\n", seq);
             printf("  sub rsp, 8\n"); // padding to align 16 byte boundary
-            // printf("  mov rax, 0\n");
+            printf("  mov rax, 0\n");
             printf("  call %s\n", node->funcname);
             printf("  add rsp, 8\n"); // remove padding
             printf(".L.end.%d:\n", seq);
@@ -147,7 +149,7 @@ static void gen(Node *node) {
             gen(node->lhs);
             // raxにpopしてから呼び出し元に戻る
             printf("  pop rax\n");
-            printf("  jmp .L.return\n");
+            printf("  jmp .L.return.%s\n", funcname);
             return;
     }
 
@@ -200,24 +202,27 @@ static void gen(Node *node) {
 void codegen(Function *prog) {
 	// アセンブリの前半部分を出力
 	printf(".intel_syntax noprefix\n");
-	printf(".global main\n");
-	printf("main:\n");
 
-    // Prologue
-    printf("  push rbp\n");
-    printf("  mov rbp, rsp\n");
-    printf("  sub rsp, %d\n", prog->stack_size); // main関数内のlocal変数の領域を確保
-
-    // Emit Code
-    // gen for each statement;
-    for(Node *node=prog->node; node; node=node->next) {
-        gen(node);
+    for(Function *fn = prog; fn; fn=fn->next) {
+        printf(".global %s\n", fn->name);
+        printf("%s:\n", fn->name);
+        funcname = fn->name;
+        
+        // Prologue
+        printf("  push rbp\n");
+        printf("  mov rbp, rsp\n");
+        printf("  sub rsp, %d\n", prog->stack_size); // main関数内のlocal変数の領域を確保
+        
+        // Emit Code
+        // gen for each statement;
+        for(Node *node=fn->node; node; node=node->next) {
+            gen(node);
+        }
+        //
+        // Epilogue
+        printf(".L.return.%s:\n", funcname);
+        printf("  mov rsp, rbp\n");
+        printf("  pop rbp\n");
+        printf("  ret\n");
     }
-
-    // Epilogue
-    printf(".L.return:\n");
-    printf("  mov rsp, rbp\n");
-    printf("  pop rbp\n");
-
-	printf("  ret\n");
 }

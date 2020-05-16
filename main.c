@@ -12,13 +12,18 @@ int main(int argc, char**argv) {
 	token = tokenize();
     Function *prog = program();
 
-    // Assign offsets to local variables.
-    int offset = 0;
-    for(Var *var = prog->locals; var; var = var->next) {
-        offset += 8;
-        var->offset = offset;
+    // prog->stack_size = offset;
+    for(Function *fn=prog; fn; fn=fn->next) {
+        // Assign offsets to function variables.
+        int offset = 0;
+        for(Var *var=prog->locals; var; var=var->next) {
+            offset += 8;
+            var->offset = offset;
+        }
+        fn->stack_size = offset;
     }
-    prog->stack_size = offset;
+
+    // Traverse the AST to emit assembly.
     codegen(prog);
 
 	return 0;
