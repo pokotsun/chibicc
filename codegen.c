@@ -211,7 +211,15 @@ void codegen(Function *prog) {
         // Prologue
         printf("  push rbp\n");
         printf("  mov rbp, rsp\n");
-        printf("  sub rsp, %d\n", prog->stack_size); // main関数内のlocal変数の領域を確保
+        printf("  sub rsp, %d\n", fn->stack_size); // main関数内のlocal変数の領域を確保
+
+        // Push arguments to the stack.
+        int i = 0;
+        for(VarList *vl = fn->params; vl; vl=vl->next) {
+            Var *var = vl->var;
+            // 関数を指しているrbpの次から引数を積む(6個以降)
+            printf("  mov [rbp-%d], %s\n", var->offset, argreg[i++]);
+        }
         
         // Emit Code
         // gen for each statement;
