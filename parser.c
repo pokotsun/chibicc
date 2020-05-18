@@ -20,14 +20,15 @@ Token *token;
 
 // 次のトークンが期待している記号の時には, トークンを1つ読み進めて
 // 真を返す. それ以外の場合には偽を返す.
-static bool consume(char *op) {
+static Token *consume(char *op) {
 	if(token->kind != TK_RESERVED ||
 		strlen(op) != token->len ||
 		memcmp(token->str, op, token->len)) {
-		return false;
+		return NULL;
 	}
-	token = token->next;
-	return true;
+	Token *t = token;
+    token = token->next;
+	return t;
 }
 
 static Token *consume_ident() {
@@ -45,7 +46,7 @@ static void expect(char *op) {
 	if(token->kind != TK_RESERVED ||
 		strlen(op) != token->len ||
 		memcmp(token->str, op, token->len)) {
-		error_at(token->str, "not '%s'.", op);
+        error_tok(token, "expected \"%s\"", op);
 	}
 	token = token->next;
 }
@@ -54,7 +55,7 @@ static void expect(char *op) {
 // それ以外の場合にはエラーを報告する.
 static int expect_number() {
 	if(token->kind != TK_NUM) {
-		error_at(token->str, "Not Number.");
+        error_tok(token, "expected a number");
 	}
 	int val = token->val;
 	token = token->next;
@@ -65,7 +66,7 @@ static int expect_number() {
 // and return TK_IDENT name.
 static char *expect_ident() {
     if(token->kind != TK_IDENT) {
-        error_at(token->str, "expected an identifier.");
+        error_tok(token, "expected an identifier");
     }
     char *s = strndup(token->str, token->len);
     token = token->next;
@@ -77,33 +78,34 @@ static bool at_eof() {
 }
 
 // generate new template node
-static Node *new_node(NodeKind kind) {
+static Node *new_node(NodeKind kind, Token *tok) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = kind;
+    node->tok = tok;
     return node;
 }
 
-static Node *new_binary(NodeKind kind, Node *lhs, Node *rhs) {
-    Node *node = new_node(kind);
+static Node *new_binary(NodeKind kind, Node *lhs, Node *rhs, Token *tok) {
+    Node *node = new_node(kind, tok);
 	node->lhs = lhs;
 	node->rhs = rhs;
 	return node;
 }
 
-static Node *new_unary(NodeKind kind, Node *expr) {
-    Node *node = new_node(kind);
+static Node *new_unary(NodeKind kind, Node *expr, Token *tok) {
+    Node *node = new_node(kind, tok);
     node->lhs = expr;
     return node;
 }
 
-static Node *new_num(int val) {
-    Node *node = new_node(ND_NUM);
+static Node *new_num(int val, Token *tok) {
+    Node *node = new_node(ND_NUM, tok);
 	node->val = val;
 	return node;
 }
 
-static Node *new_var_node(Var *var) {
-    Node *node = new_node(ND_VAR);
+static Node *new_var_node(Var *var, Token * tok) {
+    Node *node = new_node(ND_VAR, tok);
     node->var = var;
     return node;
 }
@@ -192,7 +194,8 @@ static Function *function() {
  stackの中身を一つ取り出すようにしておく.
 */
 static Node *read_expr_stmt() {
-    return new_unary(ND_EXPR_STMT, expr());
+    Token *tok = token;
+    return new_unary(ND_EXPR_STMT, expr(), tok);
 }
 
 // stmt = "return" expr ";"
@@ -202,14 +205,15 @@ static Node *read_expr_stmt() {
 //      | "{"  expr "}"
 //      | expr ";"
 static Node *stmt() {
-    if(consume("return")) {
-        Node *node = new_unary(ND_RETURN, expr());
+    Token *tok;
+    if(tok = consume("return")) {
+        Node *node = new_unary(ND_RETURN, expr(), tok);
         expect(";");
         return node;
     }
 
-    if(consume("if")) {
-        Node *node = new_node(ND_IF);
+    if(tok = consume("if")) {
+        Node *node = new_node(ND_IF, tok);
         expect("(");
         node->cond = expr();
         expect(")");
@@ -220,8 +224,8 @@ static Node *stmt() {
         return node;
     }
 
-    if(consume("while")) {
-        Node *node = new_node(ND_WHILE);
+    if(tok = consume("while")) {
+        Node *node = new_node(ND_WHILE, tok);
         expect("(");
         node->cond = expr();
         expect(")");
@@ -229,8 +233,8 @@ static Node *stmt() {
         return node;
     }
 
-    if(consume("for")) {
-        Node *node = new_node(ND_FOR);
+    if(tok = consume("for")) {
+        Node *node = new_node(ND_FOR, tok);
         expect("(");
         if(!consume(";")) {
             node->init = read_expr_stmt();
@@ -248,7 +252,7 @@ static Node *stmt() {
         return node;
     }
 
-	if(consume("{")) {
+	if(tok=consume("{")) {
 		Node head = {};
 		Node *cur = &head;
 
@@ -256,7 +260,7 @@ static Node *stmt() {
 			cur->next = stmt();
 			cur = cur->next;
 		}
-		Node *node = new_node(ND_BLOCK);
+		Node *node = new_node(ND_BLOCK, tok);
 		node->body = head.next;
 		return node;
 	}
@@ -274,8 +278,9 @@ static Node *expr() {
 // assign = equality ("=" assign)?
 static Node *assign() {
     Node *node = equality();
-    if(consume("=")) {
-        node = new_binary(ND_ASSIGN, node, assign());
+    Token *tok;
+    if(tok=consume("=")) {
+        node = new_binary(ND_ASSIGN, node, assign(), tok);
     }
     return node;
 }
@@ -284,11 +289,12 @@ static Node *assign() {
 static Node *equality() {
 	Node *node = relational();
 
+    Token *tok;
 	while(true) {
-		if (consume("==")) {
-			node = new_binary(ND_EQ, node, relational());
+		if(tok=consume("==")) {
+			node = new_binary(ND_EQ, node, relational(), tok);
 		} else if(consume("!=")) {
-			node = new_binary(ND_NE, node, relational());
+			node = new_binary(ND_NE, node, relational(), tok);
 		} else {
 			return node;
 		}
@@ -299,15 +305,16 @@ static Node *equality() {
 static Node *relational() {
 	Node *node = add();
 
+    Token *tok;
 	while(true) {
-		if(consume("<")) {
-			node = new_binary(ND_LT, node, add());
-		} else if(consume("<=")) {
-			node = new_binary(ND_LE, node, add());
-		} else if(consume(">")) {
-			node = new_binary(ND_LT, add(), node);
-		} else if(consume(">=")) {
-			node = new_binary(ND_LE, add(), node);
+		if(tok = consume("<")) {
+			node = new_binary(ND_LT, node, add(), tok);
+		} else if(tok = consume("<=")) {
+			node = new_binary(ND_LE, node, add(), tok);
+		} else if(tok = consume(">")) {
+			node = new_binary(ND_LT, add(), node, tok);
+		} else if(tok = consume(">=")) {
+			node = new_binary(ND_LE, add(), node, tok);
 		} else {
 			return node;
 		}
@@ -317,12 +324,13 @@ static Node *relational() {
 // add = mul ("+" mul | "-" mul)*
 static Node *add() {
 	Node *node = mul();
+    Token *tok;
 
 	while(true) {
-		if(consume("+")) {
-			node = new_binary(ND_ADD, node, mul());
-		} else if(consume("-")) {
-			node = new_binary(ND_SUB, node, mul());
+		if(tok = consume("+")) {
+			node = new_binary(ND_ADD, node, mul(), tok);
+		} else if(tok = consume("-")) {
+			node = new_binary(ND_SUB, node, mul(), tok);
 		} else {
 			return node;
 		}
@@ -332,12 +340,13 @@ static Node *add() {
 // mul = unary("*" unary | "/" unary)*
 static Node *mul() {
 	Node *node = unary();
+    Token *tok;
 
 	while(true) {
-		if(consume("*")) {
-			node = new_binary(ND_MUL, node, unary());
-		} else if(consume("/")) {
-			node = new_binary(ND_DIV, node, unary());
+		if(tok = consume("*")) {
+			node = new_binary(ND_MUL, node, unary(), tok);
+		} else if(tok = consume("/")) {
+			node = new_binary(ND_DIV, node, unary(), tok);
 		} else {
 			return node;
 		}
@@ -347,11 +356,12 @@ static Node *mul() {
 // unary = ("+" | "-")? unary
 //			| primary
 static Node *unary() {
-	if(consume("+")) {
+    Token * tok;
+	if(tok = consume("+")) {
 		return unary();
 	}
-	else if(consume("-")) {
-		return new_binary(ND_SUB, new_num(0), unary());
+	else if(tok = consume("-")) {
+		return new_binary(ND_SUB, new_num(0, tok), unary(), tok);
 	}
 	return primary();
 }
@@ -381,12 +391,11 @@ static Node *primary() {
 		return node;
 	}
 
-    Token *tok = consume_ident();
-
-    if(tok) {
+    Token *tok;
+    if(tok=consume_ident()) {
         // Function call
         if(consume("(")) {
-            Node *node = new_node(ND_FUNCALL);
+            Node *node = new_node(ND_FUNCALL, tok);
             node->funcname = strndup(tok->str, tok->len);
             node->args = func_args();
             return node;
@@ -398,8 +407,12 @@ static Node *primary() {
             // strndup(str, len): assign copy string of str.slice(0 until len)
             var = new_lvar(strndup(tok->str, tok->len));
         }
-        return new_var_node(var);
+        return new_var_node(var, tok);
     }
 
-	return new_num(expect_number());
+    tok = token;
+    if(tok->kind != TK_NUM) {
+        error_tok(tok, "expected expression");
+    }
+	return new_num(expect_number(), tok);
 }
