@@ -353,16 +353,19 @@ static Node *mul() {
 	}
 }
 
-// unary = ("+" | "-")? unary
+// unary = ("+" | "-" | "*" | "&")? unary
 //			| primary
 static Node *unary() {
     Token * tok;
 	if(tok = consume("+")) {
 		return unary();
-	}
-	else if(tok = consume("-")) {
+	} else if(tok = consume("-")) {
 		return new_binary(ND_SUB, new_num(0, tok), unary(), tok);
-	}
+	} else if(tok = consume("&")) {
+        return new_unary(ND_ADDR, unary(), tok);
+    } else if(tok = consume("*")) {
+        return new_unary(ND_DEREF, unary(), tok);
+    }
 	return primary();
 }
 

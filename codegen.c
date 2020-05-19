@@ -5,12 +5,19 @@ static char *funcname;
 
 static char *argreg[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
+static void gen(Node *node);
+
+// pushes the given node's address to the stack.
 static void gen_addr(Node *node) {
-    if(node->kind == ND_VAR) {
-        // [rbp-%d] アドレスの値をraxに入れる
-        printf("  lea rax, [rbp-%d]\n", node->var->offset);
-        printf("  push rax\n");
-        return;
+    switch(node->kind) {
+        case ND_VAR:
+            // [rbp-%d] アドレスの値をraxに入れる
+            printf("  lea rax, [rbp-%d]\n", node->var->offset);
+            printf("  push rax\n");
+            return;
+        case ND_DEREF:
+            gen(node->lhs);
+            return;
     }
 
     error_tok(node->tok, "not an lvalue");
@@ -50,6 +57,13 @@ static void gen(Node *node) {
             gen_addr(node->lhs);
             gen(node->rhs);
             store();
+            return;
+        case ND_ADDR: // &
+            gen_addr(node->lhs);
+            return;
+        case ND_DEREF:
+            gen(node->lhs);
+            load();
             return;
         case ND_IF: {
             int seq = labelseq++;
