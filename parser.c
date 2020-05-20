@@ -31,6 +31,16 @@ static Token *consume(char *op) {
 	return t;
 }
 
+// Return token if the current token matches a given string.
+static Token *peek(char *s) {
+    if(token->kind != TK_RESERVED || 
+        strlen(s) != token->len || 
+        strncmp(token->str, s, token->len)) {
+        return NULL;
+    }
+    return token;
+}
+
 static Token *consume_ident() {
     if(token->kind != TK_IDENT) {
         return NULL;
@@ -42,11 +52,9 @@ static Token *consume_ident() {
 
 // 次のトークンが期待している記号の時には, トークンを1つ読み進める
 // それ以外の場合にはエラーを返す.
-static void expect(char *op) {
-	if(token->kind != TK_RESERVED ||
-		strlen(op) != token->len ||
-		memcmp(token->str, op, token->len)) {
-        error_tok(token, "expected \"%s\"", op);
+static void expect(char *s) {
+    if(!peek(s)) {
+        error_tok(token, "expected \"%s\"", s);
 	}
 	token = token->next;
 }
@@ -111,9 +119,10 @@ static Node *new_var_node(Var *var, Token * tok) {
 }
 
 // assign new variable
-static Var *new_lvar(char *name) {
+static Var *new_lvar(char *name, Type *ty) {
     Var *var = calloc(1, sizeof(Var));
     var->name = name;
+    var->ty = ty;
 
     VarList *vl = calloc(1, sizeof(VarList));
     vl->var = var;
@@ -123,6 +132,7 @@ static Var *new_lvar(char *name) {
 }
 
 static Function *function();
+static Node *declaration();
 static Node *stmt();
 static Node *stmt2();
 static Node *expr();
@@ -146,31 +156,48 @@ Function *program() {
     return head.next;
 }
 
+// basetype = "int" "*"*
+static Type *basetype() {
+    expect("int");
+    Type *ty = int_type;
+    while(consume("*")) {
+        ty = pointer_to(ty);
+    }
+    return ty;
+}
+
+static VarList *read_func_param() {
+    VarList *vl = calloc(1, sizeof(VarList));
+    Type *ty = basetype();
+    vl->var = new_lvar(expect_ident(), ty);
+    return vl;
+}
+
 static VarList *read_func_params() {
     if(consume(")")) {
         return NULL;
     }
 
-    VarList *head = calloc(1, sizeof(VarList));
-    head->var = new_lvar(expect_ident());
+    VarList *head = read_func_param();
     VarList *cur = head;
 
     while(!consume(")")) {
         expect(",");
-        cur->next = calloc(1, sizeof(VarList));
-        cur->next->var = new_lvar(expect_ident());
+        cur->next = read_func_param();
         cur = cur->next;
     }
 
     return head;
 }
 
-// function = ident "(" params? ")" "{" stmt* "}"
-// params = ident("," ident)*
+// function = basetype ident "(" params? ")" "{" stmt* "}"
+// params = param ("," param)*
+// param = basetype ident
 static Function *function() {
     locals = NULL;
 
     Function *fn = calloc(1, sizeof(Function));
+    basetype();
     fn->name = expect_ident();
     expect("(");
     fn->params = read_func_params();
@@ -186,6 +213,24 @@ static Function *function() {
     fn->node = head.next;
     fn->locals = locals;
     return fn;
+}
+
+// declaration = basetype ident "=" expr ";"
+static Node *declaration() {
+    Token *tok = token;
+    Type *ty = basetype();
+    Var *var = new_lvar(expect_ident(), ty);
+
+    if(consume(";")) {
+        return new_node(ND_NULL, tok);
+    }
+
+    expect("=");
+    Node *lhs = new_var_node(var, tok);
+    Node *rhs = expr();
+    expect(";");
+    Node *node = new_binary(ND_ASSIGN, lhs, rhs, tok);
+    return new_unary(ND_EXPR_STMT, node, tok);
 }
 
 /*
@@ -210,6 +255,7 @@ static Node *stmt() {
 //      | "while" "(" expr ")" stmt
 //      | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 //      | "{"  expr "}"
+//      | declaration
 //      | expr ";"
 static Node *stmt2() {
     Token *tok;
@@ -271,6 +317,10 @@ static Node *stmt2() {
 		node->body = head.next;
 		return node;
 	}
+
+    if(tok = peek("int")) {
+        return declaration();
+    }
 
     Node *node = read_expr_stmt();
     expect(";");
@@ -438,6 +488,7 @@ static Node *primary() {
         // Function call
         if(consume("(")) {
             Node *node = new_node(ND_FUNCALL, tok);
+            // strndup(str, len): assign copy string of str.slice(0 until len)
             node->funcname = strndup(tok->str, tok->len);
             node->args = func_args();
             return node;
@@ -446,8 +497,7 @@ static Node *primary() {
         // Variable
         Var *var = find_var(tok);
         if(!var) {
-            // strndup(str, len): assign copy string of str.slice(0 until len)
-            var = new_lvar(strndup(tok->str, tok->len));
+            error_tok(tok, "undefined variable");
         }
         return new_var_node(var, tok);
     }

@@ -60,7 +60,7 @@ static bool is_alnum(char c) {
 
 static char *starts_with_reserved(char *p) {
     // Keyword
-    static char *kw[] = {"return", "if", "else", "while", "for"};   
+    static char *kw[] = {"return", "if", "else", "while", "for", "int"};
 
     for(int i=0; i<sizeof(kw) / sizeof(*kw); i++) {
         int len = strlen(kw[i]);

@@ -41,6 +41,7 @@ Token *tokenize();
 typedef struct Var Var;
 struct Var {
     char *name; // Variable name
+	Type *ty; // Type
     int offset; // Offset from RBP based current func
 };
 
@@ -75,6 +76,7 @@ typedef enum {
     ND_EXPR_STMT, // Expression statement
     ND_VAR, // Variable
 	ND_NUM, // Integer
+	ND_NULL, // Empty statement
 } NodeKind;
 
 // AST node type 
@@ -134,7 +136,10 @@ struct Type {
 	Type *base;
 };
 
+extern Type *int_type;
+
 bool is_integer(Type *ty);
+Type *pointer_to(Type *base);
 void add_type(Node *node);
 
 //

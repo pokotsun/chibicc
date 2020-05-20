@@ -46,8 +46,7 @@ static void gen(Node *node) {
 
     // gen statement stack上に値を残さない
     switch(node->kind) {
-        case ND_NUM:
-            printf("  push %d\n", node->val);
+        case ND_NULL:
             return;
         case ND_VAR:
             gen_addr(node);
@@ -175,6 +174,9 @@ static void gen(Node *node) {
 
     // gen expression stack上に値を1つ残す
 	switch (node->kind) {
+        case ND_NUM:
+            printf("  push %d\n", node->val);
+            return;
 		case ND_ADD:
 			printf("  add rax, rdi\n");
 			break;
