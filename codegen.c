@@ -178,9 +178,23 @@ static void gen(Node *node) {
 		case ND_ADD:
 			printf("  add rax, rdi\n");
 			break;
+        case ND_PTR_ADD:
+            printf("  imul rdi, 8\n"); // 型のサイズ分(今はintで決め打ち)かける
+            printf("  add rax, rdi\n");
+            break;
 		case ND_SUB:
 			printf("  sub rax, rdi\n");
 			break;
+        case ND_PTR_SUB:
+            printf("  imul rdi, 8\n"); // 型のサイズ分(今はintで決め打ち)かける
+            printf("  sub rax, rdi\n");
+            break;
+        case ND_PTR_DIFF:
+            printf("  sub rax, rdi\n");
+            printf("  cqo\n"); // raxを符号拡張して rdx:raxに設定
+            // printf("  mov rdi, 8\n");
+            printf("  idiv 8");
+            // printf("  idiv rdi\n"); // rdx:raxを除算
 		case ND_MUL:
 			printf("  imul rax, rdi\n");
 			break;
