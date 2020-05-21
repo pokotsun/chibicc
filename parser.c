@@ -143,6 +143,7 @@ static Node *add();
 static Node *mul();
 static Node *primary();
 static Node *unary();
+static Node *postfix();
 
 // program = function*
 Function *program() {
@@ -459,7 +460,7 @@ static Node *mul() {
 }
 
 // unary = ("+" | "-" | "*" | "&")? unary
-//			| primary
+//          | postfix
 static Node *unary() {
     Token * tok;
 	if(tok = consume("+")) {
@@ -471,7 +472,21 @@ static Node *unary() {
     } else if(tok = consume("*")) {
         return new_unary(ND_DEREF, unary(), tok);
     }
-	return primary();
+	return postfix();
+}
+
+// postfix = primary ("[" expr "]")*
+static Node *postfix() {
+    Node *node = primary();
+    Token *tok;
+
+    while(tok=consume("[")) {
+        // x[y] is syntax sugar for *(x+y)
+        Node *exp = new_add(node, expr(), tok);
+        expect("]");
+        node = new_unary(ND_DEREF, exp, tok);
+    }
+    return node;
 }
 
 // func-args = "(" (assign (",", assign)*)? ")" 
