@@ -37,11 +37,14 @@ void error_at(char *loc, char *fmt, ...);
 void error_tok(Token *tok, char *fmt, ...);
 Token *tokenize();
 
-// Local variable
+// variable
 typedef struct Var Var;
 struct Var {
     char *name; // Variable name
 	Type *ty; // Type
+	bool is_local; // local or global 
+
+	// Local variable
     int offset; // Offset from RBP based current func
 };
 
@@ -124,7 +127,13 @@ struct Function {
 	VarList *locals;
     int stack_size;
 };
-Function *program();
+
+typedef struct {
+	VarList *globals;
+	Function *fns;
+} Program;
+
+Program *program();
 
 // 
 // typing.c
@@ -148,5 +157,5 @@ void add_type(Node *node);
 //
 // codegen.c
 //
-void codegen(Function *prog);
+void codegen(Program *prog);
 
