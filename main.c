@@ -1,6 +1,13 @@
 #include "chibicc.h"
 Token *token;
 
+// alignが2のべき乗の場合, 
+// align以上の桁が1,未満が0のビットマスクを作って
+// alignを表現する
+int align_to(int n, int align) {
+    return (n + align - 1) & ~(align - 1);
+}
+
 int main(int argc, char**argv) {
 	if(argc != 2) {
         error("%s: invalid number of arguments", argv[0]);
@@ -20,7 +27,7 @@ int main(int argc, char**argv) {
             offset += vl->var->ty->size;
             vl->var->offset = offset;
         }
-        fn->stack_size = offset;
+        fn->stack_size = align_to(offset, 8);
     }
 
     // Traverse the AST to emit assembly.

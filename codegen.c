@@ -3,7 +3,9 @@
 static int labelseq = 1; // ラベルのindex
 static char *funcname;
 
-static char *argreg[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+// 汎用レジスタの下1bitだけ
+static char *argreg1[] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
+static char *argreg8[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
 static void gen(Node *node);
 
@@ -36,17 +38,25 @@ static void gen_lval(Node *node) {
     gen_addr(node);
 }
 
-static void load() {
+static void load(Type *ty) {
     printf("  pop rax\n");
-    printf("  mov rax, [rax]\n");
+    if(ty->size == 1) {
+        printf("  movsx rax, byte ptr [rax]\n");
+    } else {
+        printf("  mov rax, [rax]\n");
+    }
     printf("  push rax\n");
 }
 
 // store data to variable
-static void store() {
+static void store(Type *ty) {
     printf("  pop rdi\n");
     printf("  pop rax\n");
-    printf("  mov [rax], rdi\n");
+    if(ty->size == 1) { // charのとき
+        printf("  mov [rax], dil\n");
+    } else {
+        printf("  mov [rax], rdi\n");
+    }
     printf("  push rdi\n");
 }
 
@@ -64,13 +74,13 @@ static void gen(Node *node) {
         case ND_VAR:
             gen_addr(node);
             if(node->ty->kind != TY_ARRAY) {
-                load();
+                load(node->ty);
             }
             return;
         case ND_ASSIGN:
             gen_lval(node->lhs);
             gen(node->rhs);
-            store();
+            store(node->ty);
             return;
         case ND_ADDR:
             gen_addr(node->lhs);
@@ -78,7 +88,7 @@ static void gen(Node *node) {
         case ND_DEREF:
             gen(node->lhs);
             if(node->ty->kind != TY_ARRAY) {
-                load();
+                load(node->ty);
             }
             return;
         case ND_IF: {
@@ -152,7 +162,7 @@ static void gen(Node *node) {
                 nargs++;
             }
             for(int i=nargs-1; i>=0; i--) {
-                printf("  pop %s\n", argreg[i]);
+                printf("  pop %s\n", argreg8[i]);
             }
 
             // We need to align RSP to a 16 byte boundary because it is ABI!
@@ -255,6 +265,16 @@ static void emit_data(Program *prog) {
     }
 }
 
+static void load_arg(Var *var, int idx) {
+    int sz = var->ty->size;
+    if(sz == 1) {
+        printf("  mov [rbp-%d], %s\n", var->offset, argreg1[idx]);
+    } else {
+        assert(sz==8);
+        printf("  mov [rbp-%d], %s\n", var->offset, argreg8[idx]);
+    }
+}
+
 // set program code
 static void emit_text(Program *prog) {
     printf(".text\n");
@@ -271,10 +291,9 @@ static void emit_text(Program *prog) {
 
         // Push arguments to the stack.
         int i = 0;
-        for(VarList *vl = fn->params; vl; vl=vl->next) {
-            Var *var = vl->var;
-            // 関数を指しているrbpの次から引数を積む(6個以降)
-            printf("  mov [rbp-%d], %s\n", var->offset, argreg[i++]);
+        for(VarList *vl = fn->params; vl; vl = vl->next) {
+            // 関数を指しているrbpの次から引数を積む(6個まで)
+            load_arg(vl->var, i++);
         }
         
         // Emit Code
