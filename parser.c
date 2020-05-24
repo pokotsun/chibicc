@@ -565,6 +565,27 @@ static Node *postfix() {
     return node;
 }
 
+// stmt-expr = "(" "{" stmt+ "}" ")"
+// Statement expression is a GNU c extension.
+static Node *stmt_expr(Token *tok) {
+    Node *node = new_node(ND_STMT_EXPR, tok);
+    node->body = stmt();
+    Node *cur = node->body;
+
+    while(!consume("}")) {
+        cur->next = stmt();
+        cur = cur->next;
+    }
+    expect(")");
+
+    if(cur->kind != ND_EXPR_STMT) { // EXPR_STMTは何もstackに値を残さない -> voidだからダメ
+        error_tok(cur->tok, "stmt expr returning void is not supported");
+    }
+    // 最終的に評価されるだろう式の結果をtopノードにして返す
+    memcpy(cur, cur->lhs, sizeof(Node));
+    return node;
+}
+
 // func-args = "(" (assign (",", assign)*)? ")" 
 static Node *func_args() {
     if(consume(")")) {
@@ -581,13 +602,19 @@ static Node *func_args() {
     return head;
 }
 
-// primary = "(" expr ")" | "sizeof" unary | ident func-args? | str | num
-// args = "(" ident ("," ident)* ")"
+// primary = "(" "{" stmt-expr-tail
+//          | "(" expr ")" 
+//          | "sizeof" unary 
+//          | ident func-args? 
+//          | str 
+//          | num
 static Node *primary() {
     Token *tok;
 
-	// 次のトークンが"("なら, "(" expr ")"のはず
-	if(consume("(")) {
+    if(tok = consume("(")) {
+        if(consume("{")) {
+            return stmt_expr(tok);
+        }
 		Node *node = expr();
 		expect(")");
 		return node;

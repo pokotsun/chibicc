@@ -151,6 +151,7 @@ static void gen(Node *node) {
             printf("  add rsp, 8\n");
             return;
 		case ND_BLOCK:
+        case ND_STMT_EXPR:
 			for(Node *n = node->body; n; n=n->next) {
 				gen(n);
 			}
