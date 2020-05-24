@@ -159,6 +159,13 @@ static Var *new_gvar(char *name, Type *ty) {
     return var;
 }
 
+static char *new_label() {
+    static int cnt = 0;
+    char buf[20];
+    sprintf(buf, ".L.data.%d", cnt++);
+    return strndup(buf, 20);
+}
+
 static Function *function();
 static Type *basetype();
 static void global_var();
@@ -574,7 +581,8 @@ static Node *func_args() {
     return head;
 }
 
-// primary = "(" expr ")" | "sizeof" unary | ident func-args? | num
+// primary = "(" expr ")" | "sizeof" unary | ident func-args? | str | num
+// args = "(" ident ("," ident)* ")"
 static Node *primary() {
     Token *tok;
 
@@ -610,6 +618,16 @@ static Node *primary() {
     }
 
     tok = token;
+    if(tok->kind == TK_STR) {
+        token = token->next;
+
+        Type *ty = array_of(char_type, tok->cont_len);
+        Var *var = new_gvar(new_label(), ty);
+        var->contents = tok->contents;
+        var->cont_len = tok->cont_len;
+        return new_var_node(var, tok);
+    }
+
     if(tok->kind != TK_NUM) {
         error_tok(tok, "expected expression");
     }

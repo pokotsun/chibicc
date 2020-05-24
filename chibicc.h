@@ -17,6 +17,7 @@ typedef struct Type Type;
 typedef enum {
 	TK_RESERVED, // 予約語(演算子とか)
     TK_IDENT, // Identifiers
+    TK_STR, // String literals
 	TK_NUM, // number token
 	TK_EOF, // end of input
 } TokenKind;
@@ -30,6 +31,9 @@ struct Token {
 	int val; // kindがTK_NUMの場合, その数値
 	char *str; // トークン文字列
 	int len; // トークンの長さ
+
+    char *contents; // String literal contents including terminating '\0'
+    char cont_len; // string literal length
 };
 
 void error(char *fmt, ...);
@@ -46,6 +50,10 @@ struct Var {
 
 	// Local variable
     int offset; // Offset from RBP based current func
+
+    // Global variable
+    char *contents;
+    int cont_len;
 };
 
 typedef struct VarList VarList;

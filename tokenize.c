@@ -89,10 +89,28 @@ Token *tokenize() {
     cur->str = p;
 
 	while(*p) {
+        // Skip whitespace characters.
 		if(isspace(*p)) {
 			p++;
 			continue;
 		}
+
+        // String literal
+        if(*p == '"') {
+            char *q = p++;
+            while(*p && *p != '"') {
+                p++;
+            }
+            if(!*p) {
+                error_at(q, "unclosed string literal");
+            }
+            p++;
+
+            cur = new_token(TK_STR, cur, q, p - q);
+            cur->contents = strndup(q+1, p-q-2);
+            cur->cont_len = p - q- 1;
+            continue;
+        }
 
         // Keywords or multi-letter punctuators
         char *kw = starts_with_reserved(p);
