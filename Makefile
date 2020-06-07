@@ -1,5 +1,5 @@
 CFLAGS=-std=c11 -g -static
-SRCS=$(wildcard *.c)
+SRCS = $(filter-out tests.c, $(wildcard *.c))
 OBJS=$(SRCS:.c=.o)
 
 all: chibicc test clean
@@ -10,7 +10,7 @@ chibicc: $(OBJS)
 $(OBJS): chibicc.h
 
 test: chibicc
-			./chibicc tests > tmp.s
+			./chibicc tests.c > tmp.s
 			gcc -static -o tmp tmp.s
 			./tmp
 
