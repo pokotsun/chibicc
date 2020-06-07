@@ -222,7 +222,9 @@ static void gen(Node *node) {
         case ND_PTR_DIFF:
             printf("  sub rax, rdi\n");
             printf("  cqo\n"); // raxを符号拡張して rdx:raxに設定
-            printf("  idiv %d\n", node->lhs->ty->base->size); // rdx:raxから型のサイズ分除算
+            printf("  mov rdi, %d\n", node->lhs->ty->base->size);
+            printf("  idiv rdi\n"); // rdx:raxから型のサイズ分除算
+            break;
 		case ND_MUL:
 			printf("  imul rax, rdi\n");
 			break;
