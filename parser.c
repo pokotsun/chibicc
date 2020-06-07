@@ -4,26 +4,16 @@
 // accumulated to this list
 static VarList *locals;
 static VarList *globals;
+static VarList *scope;
 
-// Find a local variable by name.
+// Find a variable by name.
 static Var *find_var(Token *tok) {
-
-    // search from local variables
-    for(VarList *vl = locals; vl; vl = vl->next) {
-        Var *var = vl->var;
-        if(strlen(var->name) == tok->len && !memcmp(tok->str, var->name, tok->len)) {
-            return var;
-        }
-    }
-
-    // search from global variables
-    for(VarList *vl=globals; vl; vl->next) {
+    for(VarList *vl = scope; vl; vl=vl->next) {
         Var *var = vl->var;
         if(strlen(var->name) == tok->len && !strncmp(tok->str, var->name, tok->len)) {
             return var;
         }
     }
-
     return NULL;
 }
 
@@ -136,6 +126,11 @@ static Var *new_var(char *name, Type *ty, bool is_local) {
     var->name = name;
     var->ty = ty;
     var->is_local = is_local;
+
+    VarList *sc = calloc(1, sizeof(VarList));
+    sc->var = var;
+    sc->next = scope;
+    scope = sc;
     return var;
 }
 
@@ -277,6 +272,8 @@ static Function *function() {
     basetype();
     fn->name = expect_ident();
     expect("(");
+
+    VarList *sc = scope;
     fn->params = read_func_params();
     expect("{");
 
@@ -286,6 +283,7 @@ static Function *function() {
         cur->next = stmt();
         cur = cur->next;
     }
+    scope = sc;
 
     fn->node = head.next;
     fn->locals = locals;
@@ -402,10 +400,13 @@ static Node *stmt2() {
 		Node head = {};
 		Node *cur = &head;
 
+        VarList *sc = scope;
 		while(!consume("}")) {
 			cur->next = stmt();
 			cur = cur->next;
 		}
+        scope = sc;
+
 		Node *node = new_node(ND_BLOCK, tok);
 		node->body = head.next;
 		return node;
@@ -568,6 +569,8 @@ static Node *postfix() {
 // stmt-expr = "(" "{" stmt+ "}" ")"
 // Statement expression is a GNU c extension.
 static Node *stmt_expr(Token *tok) {
+    VarList *sc = scope;
+
     Node *node = new_node(ND_STMT_EXPR, tok);
     node->body = stmt();
     Node *cur = node->body;
@@ -577,6 +580,8 @@ static Node *stmt_expr(Token *tok) {
         cur = cur->next;
     }
     expect(")");
+
+    scope = sc;
 
     if(cur->kind != ND_EXPR_STMT) { // EXPR_STMTは何もstackに値を残さない -> voidだからダメ
         error_tok(cur->tok, "stmt expr returning void is not supported");
