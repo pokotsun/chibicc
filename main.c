@@ -1,9 +1,34 @@
 #include "chibicc.h"
+
 Token *token;
 
+// Returns the contents of a given file.
+static char *read_file(char *path) {
+	// Open and read the file
+	FILE *fp = fopen(path, "r");
+	if(!fp) {
+		error("cannot open %s: %s", path, strerror(errno));
+	}
+
+	int filemax = 10 * 1024 * 1024;
+	char *buf = malloc(filemax);
+	// 終端文字用に2文字残しておく
+	int size = fread(buf, 1, filemax - 2, fp);
+	if(!feof(fp)) {
+		error("%s: file too large");
+	}
+	
+	// Make sure that the string ends with "\n\0".
+	if(size == 0 || buf[size - 1] != '\n') {
+		buf[size++] = '\n';
+	}
+	buf[size] = '\0';
+	return buf;
+}
+
 // alignが2のべき乗の場合, 
-// align以上の桁が1,未満が0のビットマスクを作って
-// alignを表現する
+// align以上の桁が1,未満が0のビットマスクで
+// alignを表現できる
 int align_to(int n, int align) {
     return (n + align - 1) & ~(align - 1);
 }
@@ -15,7 +40,8 @@ int main(int argc, char**argv) {
 	}
 
 	// tokenizer
-    user_input = argv[1];
+	filename = argv[1];
+	user_input = read_file(argv[1]);
 	token = tokenize();
     Program *prog = program();
 
