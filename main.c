@@ -26,12 +26,6 @@ static char *read_file(char *path) {
 	return buf;
 }
 
-// alignが2のべき乗の場合, 
-// align以上の桁が1,未満が0のビットマスクで
-// alignを表現できる
-int align_to(int n, int align) {
-    return (n + align - 1) & ~(align - 1);
-}
 
 int main(int argc, char**argv) {
 	if(argc != 2) {
