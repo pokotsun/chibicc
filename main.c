@@ -44,8 +44,10 @@ int main(int argc, char**argv) {
         // Assign offsets to function variables.
         int offset = 0;
         for(VarList *vl=fn->locals; vl; vl=vl->next) {
-            offset += vl->var->ty->size;
-            vl->var->offset = offset;
+            Var *var = vl->var;
+            offset = align_to(offset, var->ty->align);
+            offset += var->ty->size;
+            var->offset = offset;
         }
         fn->stack_size = align_to(offset, 8);
     }
