@@ -1,10 +1,14 @@
 #include "chibicc.h"
 
 Type *char_type = &(Type) { TY_CHAR, 1, 1 };
+Type *short_type = &(Type) { TY_SHORT, 2, 2 };
 Type *int_type = &(Type) { TY_INT, 4, 4 };
+Type *long_type = &(Type) { TY_LONG, 8, 8 };
 
 bool is_integer(Type *ty) {
-    return ty->kind == TY_CHAR || ty->kind == TY_INT;
+    TypeKind k = ty->kind;
+    return k == TY_CHAR || k == TY_SHORT || k == TY_INT ||
+           k == TY_LONG;
 }
 
 // alignが2のべき乗の場合,
@@ -65,7 +69,7 @@ void add_type(Node *node) {
         case ND_LE:
         case ND_FUNCALL:
         case ND_NUM:
-            node->ty = int_type;
+            node->ty = long_type;
             return;
         case ND_PTR_ADD:
         case ND_PTR_SUB:
