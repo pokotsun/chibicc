@@ -311,6 +311,7 @@ static Type *basetype() {
         return int_type;
     }
     if(consume("long")) {
+        consume("long");
         return long_type;
     }
     if(consume("struct")) {
