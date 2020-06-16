@@ -289,10 +289,14 @@ Program *program() {
 }
 
 // basetype = builtin-type | struct-decl | typedef-name
-// builtin-type = "char" | "short" | "int" | "long" 
+// builtin-type = "void" | "char" | "short" | "int" | "long" 
 static Type *basetype() {
     if(!is_typename(token)) {
         error_tok(token, "typename expected");
+    }
+
+    if(consume("void")) {
+        return void_type;
     }
     if(consume("char")) {
         return char_type;
@@ -506,8 +510,11 @@ static Node *declaration() {
     ty = declarator(ty, &name);
     ty = type_suffix(ty);
 
+    if(ty->kind == TY_VOID) {
+        // In case void *x, its type is TY_PTR, so does not enter this scope
+        error_tok(tok, "variable declared void");
+    }
     Var *var = new_lvar(name, ty);
-
     if(consume(";")) {
         return new_node(ND_NULL, tok);
     }
@@ -533,8 +540,8 @@ static Node *read_expr_stmt() {
 
 // Returns true if the next token represents a type.
 static bool is_typename() {
-    return peek("char") || peek("short") || peek("int") || peek("long") || 
-           peek("struct") || find_typedef(token);
+    return peek("void") || peek("char") || peek("short") || peek("int") || 
+           peek("long") || peek("struct") || find_typedef(token);
 }
 
 static Node *stmt() {
