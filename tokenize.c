@@ -47,7 +47,6 @@ static void verror_at(char *loc, char *fmt, va_list ap) {
 	fprintf(stderr, "^ ");
 	vfprintf(stderr, fmt, ap);
 	fprintf(stderr, "\n");
-	exit(1);
 }
 
 // エラー箇所を報告する
@@ -55,10 +54,18 @@ void error_at(char *loc, char *fmt, ...) {
 	va_list ap;
 	va_start(ap, fmt);
     verror_at(loc, fmt, ap);
+	exit(1);
 } 
 
 // Reports an error location and exit.
 void error_tok(Token *tok, char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    verror_at(tok->str, fmt, ap);
+    exit(1);
+}
+
+void warn_tok(Token *tok, char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
     verror_at(tok->str, fmt, ap);
