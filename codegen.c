@@ -67,14 +67,21 @@ static void load(Type *ty) {
 static void store(Type *ty) {
     printf("  pop rdi\n");
     printf("  pop rax\n");
-    if(ty->size == 1) { // charのとき
+
+    if(ty->kind == TY_BOOL) {
+        printf("  cmp rdi, 0\n");
+        printf("  setne dil\n");
+        printf("  movzb rdi, dil\n");
+    }
+
+    if(ty->size == 1) { // char 
         printf("  mov [rax], dil\n");
-    } else if(ty->size == 2) {
+    } else if(ty->size == 2) { // short
         printf("  mov [rax], di\n");
-    } else if(ty->size == 4) {
+    } else if(ty->size == 4) { // int
         printf("  mov [rax], edi\n");
     } else {
-        assert(ty->size == 8);
+        assert(ty->size == 8); // long
         printf("  mov [rax], rdi\n");
     }
 
