@@ -256,7 +256,8 @@ static Node *postfix();
 static bool is_function() {
     Token *tok = token;
 
-    Type *ty = basetype();
+    bool is_typedef;
+    Type *ty = basetype(&is_typedef);
     char *name = NULL;
     declarator(ty, &name);
     bool isfunc = name && consume("(");
@@ -289,35 +290,111 @@ Program *program() {
 }
 
 // basetype = builtin-type | struct-decl | typedef-name
-// builtin-type = "void" | "bool" | "char" | "short" | "int" | "long" 
-static Type *basetype() {
-    if(!is_typename(token)) {
+// builtin-type = "void" | "bool" | "char" | "short" | "int" 
+//                       | "long" | "long long"
+//
+// Note that "typedef" can appear anywhere in basetype.
+// "int" can appear anywhere if type is short, long or long long.
+static Type *basetype(bool *is_typedef) {
+    if(!is_typename()) {
         error_tok(token, "typename expected");
     }
 
-    if(consume("void")) {
-        return void_type;
+    enum {
+        VOID = 1 << 0,
+        BOOL = 1 << 2,
+        CHAR = 1 << 4,
+        SHORT = 1 << 6,
+        INT = 1 << 8,
+        LONG = 1 << 10,
+        OTHER = 1 << 12,
+    };
+
+    Type *ty = int_type;
+    int counter = 0;
+
+    if(is_typedef) {
+        *is_typedef = false;
     }
-    if(consume("_Bool")) {
-        return bool_type;
+
+    while(is_typename()) {
+        Token *tok = token;
+
+        // Handle storage class specifiers.
+        if(consume("typedef")) {
+            if(!is_typedef) {
+                error_tok(tok, "invalid storage class specifier");
+            }
+            *is_typedef = true;
+            continue;
+        }
+
+        // Handle user-defined types.
+        if(!peek("void") && !peek("_Bool") && !peek("char") &&
+           !peek("short") && !peek("int") && !peek("long")) {
+            if(counter) break;
+
+            if(peek("struct")) {
+                ty = struct_decl();
+            } else {
+                ty = find_typedef(token);
+                assert(ty);
+                token = token->next;
+            }
+
+            counter |= OTHER;
+            continue;
+        }
+
+        // Handle built-in types.
+        if(consume("void")) {
+            counter += VOID;
+        }
+        if(consume("_Bool")) {
+            counter += BOOL;
+        }
+        if(consume("char")) {
+            counter += CHAR;
+        }
+        if(consume("short")) {
+            counter += SHORT;
+        }
+        if(consume("int")) {
+            counter += INT;
+        }
+        if(consume("long")) {
+            counter += LONG;
+        }
+
+        switch(counter) {
+            case VOID:
+                ty = void_type;
+                break;
+            case BOOL:
+                ty = bool_type;
+                break;
+            case CHAR:
+                ty = char_type;
+                break;
+            case SHORT:
+            case SHORT + INT:
+                ty = short_type;
+                break;
+            case INT:
+                ty = int_type;
+                break;
+            case LONG:
+            case LONG + INT:
+            case LONG + LONG:
+            case LONG + LONG + INT:
+                ty = long_type;
+                break;
+            default:
+                error_tok(tok, "invalid type");
+        }
     }
-    if(consume("char")) {
-        return char_type;
-    }
-    if(consume("short")) {
-        return short_type;
-    }
-    if(consume("int")) {
-        return int_type;
-    }
-    if(consume("long")) {
-        consume("long");
-        return long_type;
-    }
-    if(consume("struct")) {
-        return struct_decl();
-    }
-    return find_var(consume_ident())->type_def;
+
+    return ty;
 }
 
 // declarator = "*"* ("(" declarator ")" | ident) type-suffix
@@ -361,8 +438,8 @@ static void push_tag_scope(Token *tok, Type *ty) {
 // struct-decl = "struct"
 //             | "struct" "{" struct-member "}"
 static Type *struct_decl() {
-
     // Read a struct tag.
+    expect("struct");
     Token *tag = consume_ident();
     if(tag && !peek("{")) {
         TagScope *sc = find_tag(tag);
@@ -410,7 +487,7 @@ static Type *struct_decl() {
 
 // struct-member = basetype declarator type-suffix ";"
 static Member *struct_member() {
-    Type *ty = basetype();
+    Type *ty = basetype(NULL);
     char *name = NULL;
     ty = declarator(ty, &name);
     ty = type_suffix(ty);
@@ -423,7 +500,7 @@ static Member *struct_member() {
 }
 
 static VarList *read_func_param() {
-    Type *ty = basetype();
+    Type *ty = basetype(NULL);
     char *name = NULL;
     ty = declarator(ty, &name);
     ty = type_suffix(ty);
@@ -456,7 +533,7 @@ static VarList *read_func_params() {
 static Function *function() {
     locals = NULL;
 
-    Type *ty = basetype();
+    Type *ty = basetype(NULL);
     char *name = NULL;
     ty = declarator(ty, &name);
 
@@ -493,19 +570,26 @@ static Function *function() {
 
 // global-var = basetype declarator type-suffix";"
 static void global_var() {
-    Type *ty = basetype();
+    bool is_typedef;
+    Type *ty = basetype(&is_typedef);
     char *name = NULL;
     ty = declarator(ty, &name);
     ty = type_suffix(ty);
     expect(";");
-    new_gvar(name, ty, true);
+
+    if(is_typedef) {
+        push_scope(name)->type_def = ty;
+    } else {
+        new_gvar(name, ty, true);
+    }
 }
 
 // declaration = basetype declarator type-suffix ("=" expr ) ";"
 //             | basetype ";"
 static Node *declaration() {
     Token *tok = token;
-    Type *ty = basetype();
+    bool is_typedef;
+    Type *ty = basetype(&is_typedef);
     if(consume(";")) {
         return new_node(ND_NULL, tok);
     }
@@ -513,6 +597,12 @@ static Node *declaration() {
     char *name = NULL;
     ty = declarator(ty, &name);
     ty = type_suffix(ty);
+
+    if(is_typedef) {
+        expect(";");
+        push_scope(name)->type_def = ty;
+        return new_node(ND_NULL, tok);
+    }
 
     if(ty->kind == TY_VOID) {
         // In case void *x, its type is TY_PTR, so does not enter this scope
@@ -544,8 +634,9 @@ static Node *read_expr_stmt() {
 
 // Returns true if the next token represents a type.
 static bool is_typename() {
-    return peek("void") || peek("_Bool") || peek("char") || peek("short") || 
-           peek("int") || peek("long") || peek("struct") || find_typedef(token);
+    return peek("void") || peek("_Bool") || peek("char") || peek("short") ||
+           peek("int") || peek("long") || peek("struct") || peek("typedef") ||
+           find_typedef(token);
 }
 
 static Node *stmt() {
@@ -559,7 +650,6 @@ static Node *stmt() {
 //      | "while" "(" expr ")" stmt
 //      | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 //      | "{"  stmt "}"
-//      | "typedef" basetype declarator type-suffix ";"
 //      | declaration
 //      | expr ";"
 static Node *stmt2() {
@@ -625,17 +715,6 @@ static Node *stmt2() {
 		node->body = head.next;
 		return node;
 	}
-
-    if(tok=consume("typedef")) {
-        Type *ty = basetype();
-        char *name = NULL;
-        ty = declarator(ty, &name);
-        ty = type_suffix(ty);
-        expect(";");
-
-        push_scope(name)->type_def = ty;
-        return new_node(ND_NULL, tok);
-    }
 
     if(is_typename()) {
         return declaration();
