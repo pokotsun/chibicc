@@ -91,7 +91,7 @@ static void store(Type *ty) {
 // generate code for a given node
 static void gen(Node *node) {
 	if(node->kind == ND_NUM) {
-		printf("  push %d\n", node->val);
+		printf("  push %ld\n", node->val);
 		return;
 	}
 
@@ -232,7 +232,13 @@ static void gen(Node *node) {
     // gen expression stack上に値を1つ残す
 	switch (node->kind) {
         case ND_NUM:
-            printf("  push %d\n", node->val);
+            printf("  push %ld\n", node->val);
+            if(node->val == (int)node->val) { // case int size
+                printf("  push %ld\n", node->val);
+            } else { // long type
+                printf("  movabs rax, %ld\n", node->val);
+                printf("  push rax\n");
+            }
             return;
 		case ND_ADD:
 			printf("  add rax, rdi\n");

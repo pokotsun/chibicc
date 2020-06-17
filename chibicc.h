@@ -124,7 +124,7 @@ struct Node {
 	Node *args;
 
     Var *var; // 変数の時だけ使う
-	int val; // kindがND_NUMの場合のみ使う
+	long val; // kindがND_NUMの場合のみ使う
 };
 
 extern Token *token;
