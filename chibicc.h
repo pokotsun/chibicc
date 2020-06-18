@@ -92,6 +92,7 @@ typedef enum {
     ND_STMT_EXPR, // Statement expression 複数文が存在するが最後の文の結果だけstackに残す
     ND_VAR, // Variable
 	ND_NUM, // Integer
+	ND_CAST, // Type cast
 	ND_NULL, // Empty statement
 } NodeKind;
 

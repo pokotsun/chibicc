@@ -88,6 +88,26 @@ static void store(Type *ty) {
     printf("  push rdi\n");
 }
 
+// データのcast
+static void truncate(Type *ty) {
+    printf("  pop rax\n");
+
+    if(ty->kind == TY_BOOL) {
+        printf("  cmp rax, 0\n");
+        printf("  setne al\n");
+    }
+
+    if(ty->size == 1) {
+        printf("  movsx rax, al\n");
+    } else if(ty->size == 2) {
+        printf("  movsx rax, ax\n");
+    } else if(ty->size == 4) {
+        printf("  movsxd rax, eax\n");
+    }
+    // long -> 8byteのときはそのまま使えばよいため何もしない
+    printf("  push rax\n");
+}
+
 // generate code for a given node
 static void gen(Node *node) {
 	if(node->kind == ND_NUM) {
@@ -220,6 +240,10 @@ static void gen(Node *node) {
             // raxにpopしてから呼び出し元に戻る
             printf("  pop rax\n");
             printf("  jmp .L.return.%s\n", funcname);
+            return;
+        case ND_CAST:
+            gen(node->lhs);
+            truncate(node->ty);
             return;
     }
 
