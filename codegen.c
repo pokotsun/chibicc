@@ -65,8 +65,8 @@ static void load(Type *ty) {
 
 // store data to variable
 static void store(Type *ty) {
-    printf("  pop rdi\n");
-    printf("  pop rax\n");
+    printf("  pop rdi\n"); // value
+    printf("  pop rax\n"); // variable address
 
     if(ty->kind == TY_BOOL) {
         printf("  cmp rdi, 0\n");
@@ -118,6 +118,80 @@ static void dec(Type *ty) {
     printf("  pop rax\n");
     printf("  sub rax, %d\n", ty->base ? ty->base->size : 1);
     printf("  push rax\n");
+}
+
+static void gen_binary(Node *node) {
+	printf("  pop rdi\n"); // value2
+	printf("  pop rax\n"); // value1
+
+    // gen expression stack上に値を1つ残す
+	switch (node->kind) {
+        case ND_NUM:
+            printf("  push %ld\n", node->val);
+            if(node->val == (int)node->val) { // on int size
+                printf("  push %ld\n", node->val);
+            } else { // long type
+                printf("  movabs rax, %ld\n", node->val);
+                printf("  push rax\n");
+            }
+            return;
+		case ND_ADD:
+        case ND_ADD_EQ:
+			printf("  add rax, rdi\n");
+			break;
+        case ND_PTR_ADD:
+        case ND_PTR_ADD_EQ:
+            printf("  imul rdi, %d\n", node->ty->base->size); // 型のサイズ分をかける
+            printf("  add rax, rdi\n");
+            break;
+		case ND_SUB:
+        case ND_SUB_EQ:
+			printf("  sub rax, rdi\n");
+			break;
+        case ND_PTR_SUB:
+        case ND_PTR_SUB_EQ:
+            printf("  imul rdi, %d\n", node->ty->base->size); // 型のサイズ分をかける
+            printf("  sub rax, rdi\n");
+            break;
+        case ND_PTR_DIFF:
+            printf("  sub rax, rdi\n");
+            printf("  cqo\n"); // raxを符号拡張して rdx:raxに設定
+            printf("  mov rdi, %d\n", node->lhs->ty->base->size);
+            printf("  idiv rdi\n"); // rdx:raxから型のサイズ分除算
+            break;
+		case ND_MUL:
+        case ND_MUL_EQ:
+			printf("  imul rax, rdi\n");
+			break;
+		case ND_DIV:
+        case ND_DIV_EQ:
+			printf("  cqo\n");
+			printf("  idiv rdi\n");
+			break;
+		case ND_EQ:
+			printf("  cmp rax, rdi\n");
+			printf("  sete al\n");
+			printf("  movzb rax, al\n");
+			break;
+		case ND_NE:
+			printf("  cmp rax, rdi\n");
+			printf("  setne al\n");
+			printf("  movzb rax, al\n");
+			break;
+		case ND_LT:
+			printf("  cmp rax, rdi\n");
+			printf("  setl al\n");
+			printf("  movzb rax, al\n");
+			break;
+		case ND_LE:
+			printf("  cmp rax, rdi\n");
+			printf("  setle al\n");
+			printf("  movzb rax, al\n");
+			break;
+	}
+
+	printf("  push rax\n");
+
 }
 
 // generate code for a given node
@@ -172,6 +246,19 @@ static void gen(Node *node) {
             dec(node->ty);
             store(node->ty);
             inc(node->ty);
+            return;
+        case ND_ADD_EQ:
+        case ND_PTR_ADD_EQ:
+        case ND_SUB_EQ:
+        case ND_PTR_SUB_EQ:
+        case ND_MUL_EQ:
+        case ND_DIV_EQ:
+            gen_lval(node->lhs);
+            printf("  push [rsp]\n");
+            load(node->lhs->ty);
+            gen(node->rhs);
+            gen_binary(node);
+            store(node->ty);
             return;
         case ND_COMMA:
             gen(node->lhs);
@@ -296,70 +383,7 @@ static void gen(Node *node) {
 	gen(node->lhs);
 	gen(node->rhs);
 
-	printf("  pop rdi\n");
-	printf("  pop rax\n");
-
-    // gen expression stack上に値を1つ残す
-	switch (node->kind) {
-        case ND_NUM:
-            printf("  push %ld\n", node->val);
-            if(node->val == (int)node->val) { // case int size
-                printf("  push %ld\n", node->val);
-            } else { // long type
-                printf("  movabs rax, %ld\n", node->val);
-                printf("  push rax\n");
-            }
-            return;
-		case ND_ADD:
-			printf("  add rax, rdi\n");
-			break;
-        case ND_PTR_ADD:
-            printf("  imul rdi, %d\n", node->ty->base->size); // 型のサイズ分をかける
-            printf("  add rax, rdi\n");
-            break;
-		case ND_SUB:
-			printf("  sub rax, rdi\n");
-			break;
-        case ND_PTR_SUB:
-            printf("  imul rdi, %d\n", node->ty->base->size); // 型のサイズ分をかける
-            printf("  sub rax, rdi\n");
-            break;
-        case ND_PTR_DIFF:
-            printf("  sub rax, rdi\n");
-            printf("  cqo\n"); // raxを符号拡張して rdx:raxに設定
-            printf("  mov rdi, %d\n", node->lhs->ty->base->size);
-            printf("  idiv rdi\n"); // rdx:raxから型のサイズ分除算
-            break;
-		case ND_MUL:
-			printf("  imul rax, rdi\n");
-			break;
-		case ND_DIV:
-			printf("  cqo\n");
-			printf("  idiv rdi\n");
-			break;
-		case ND_EQ:
-			printf("  cmp rax, rdi\n");
-			printf("  sete al\n");
-			printf("  movzb rax, al\n");
-			break;
-		case ND_NE:
-			printf("  cmp rax, rdi\n");
-			printf("  setne al\n");
-			printf("  movzb rax, al\n");
-			break;
-		case ND_LT:
-			printf("  cmp rax, rdi\n");
-			printf("  setl al\n");
-			printf("  movzb rax, al\n");
-			break;
-		case ND_LE:
-			printf("  cmp rax, rdi\n");
-			printf("  setle al\n");
-			printf("  movzb rax, al\n");
-			break;
-	}
-
-	printf("  push rax\n");
+    gen_binary(node);
 }
 
 // set global data
