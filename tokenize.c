@@ -188,6 +188,34 @@ static Token *read_char_literal(Token *cur, char *start) {
     return tok; 
 }
 
+static Token *read_int_literal(Token *cur, char *start) {
+    char *p = start;
+
+    int base;
+    // 文字の大文字小文字関係なく比較 
+    if(!strncasecmp(p, "0x", 2) && is_alnum(p[2])) {
+        p += 2;
+        base = 16;
+    } else if(!strncasecmp(p, "0b", 2) && is_alnum(p[2])) {
+        p += 2;
+        base = 2;
+    } else if(*p == '0') {
+        base = 8;
+    } else {
+        base = 10;
+    }
+    
+    // 数字の読み出し
+    long val = strtol(p, &p, base);
+    if(is_alnum(*p)) {
+        error_at(p, "invalid digit");
+    }
+
+    Token *tok = new_token(TK_NUM, cur, start, p - start);
+    tok->val = val;
+    return tok;
+}
+
 // 入力文字列pをトークナイズしてそれを返す
 Token *tokenize() {
 	char *p = user_input;
@@ -263,10 +291,8 @@ Token *tokenize() {
 		//
 		// Integer literal
 		if(isdigit(*p)) {
-			cur = new_token(TK_NUM, cur, p, 0);
-			char *q = p;
-			cur->val = strtol(p, &p, 10);
-			cur->len = p - q;
+            cur = read_int_literal(cur, p);
+            p += cur->len;
 			continue;
 		}
 
