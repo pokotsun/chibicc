@@ -16,6 +16,11 @@ test: chibicc
 			gcc -static -o tmp tmp.s tmp2.o
 			./tmp
 
+eight-queen: chibicc
+			./chibicc examples/nqueen.c > tmp.s
+			gcc -static -o tmp tmp.s
+			./tmp
+
 clean:
 	rm -f chibicc *.o *~ tmp*
 
