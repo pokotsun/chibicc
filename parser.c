@@ -234,8 +234,13 @@ static char *new_label() {
     return strndup(buf, 20);
 }
 
+typedef enum {
+    TYPEDEF = 1 << 0,
+    STATIC = 1 << 1,
+} StorageClass;
+
 static Function *function();
-static Type *basetype();
+static Type *basetype(StorageClass *sclass);
 static Type *declarator(Type *ty, char **name);
 static Type *abstract_declarator(Type *ty);
 static Type *type_suffix(Type *ty);
@@ -264,8 +269,8 @@ static Node *postfix();
 static bool is_function() {
     Token *tok = token;
 
-    bool is_typedef;
-    Type *ty = basetype(&is_typedef);
+    StorageClass sclass;
+    Type *ty = basetype(&sclass);
     char *name = NULL;
     declarator(ty, &name);
     bool isfunc = name && consume("(");
@@ -301,9 +306,9 @@ Program *program() {
 // builtin-type = "void" | "bool" | "char" | "short" | "int" 
 //                       | "long" | "long long"
 //
-// Note that "typedef" can appear anywhere in basetype.
+// Note that "typedef" and "static" can appear anywhere in basetype.
 // "int" can appear anywhere if type is short, long or long long.
-static Type *basetype(bool *is_typedef) {
+static Type *basetype(StorageClass *sclass) {
     if(!is_typename()) {
         error_tok(token, "typename expected");
     }
@@ -321,19 +326,28 @@ static Type *basetype(bool *is_typedef) {
     Type *ty = int_type;
     int counter = 0;
 
-    if(is_typedef) {
-        *is_typedef = false;
+    if(sclass) {
+        *sclass = 0;
     }
 
     while(is_typename()) {
         Token *tok = token;
 
         // Handle storage class specifiers.
-        if(consume("typedef")) {
-            if(!is_typedef) {
-                error_tok(tok, "invalid storage class specifier");
+        if(peek("typedef") || peek("static")) {
+            if(!sclass) {
+                error_tok(tok, "storage class specifier is not allowed");
             }
-            *is_typedef = true;
+
+            if(consume("typedef")) {
+                *sclass |= TYPEDEF;
+            } else if(consume("static")) {
+                *sclass |= STATIC;
+            }
+
+            if(*sclass & (*sclass - 1)) {
+                error_tok(tok, "typedef and static may not be used together");
+            }
             continue;
         }
 
@@ -628,7 +642,8 @@ static VarList *read_func_params() {
 static Function *function() {
     locals = NULL;
 
-    Type *ty = basetype(NULL);
+    StorageClass sclass;
+    Type *ty = basetype(&sclass);
     char *name = NULL;
     ty = declarator(ty, &name);
 
@@ -638,6 +653,7 @@ static Function *function() {
     // Construct a function object
     Function *fn = calloc(1, sizeof(Function));
     fn->name = name;
+    fn->is_static = (sclass == STATIC);
     expect("(");
 
     Scope *sc = enter_scope();
@@ -665,14 +681,14 @@ static Function *function() {
 
 // global-var = basetype declarator type-suffix";"
 static void global_var() {
-    bool is_typedef;
-    Type *ty = basetype(&is_typedef);
+    StorageClass sclass;
+    Type *ty = basetype(&sclass);
     char *name = NULL;
     ty = declarator(ty, &name);
     ty = type_suffix(ty);
     expect(";");
 
-    if(is_typedef) {
+    if(sclass == TYPEDEF) {
         push_scope(name)->type_def = ty;
     } else {
         new_gvar(name, ty, true);
@@ -683,8 +699,8 @@ static void global_var() {
 //             | basetype ";"
 static Node *declaration() {
     Token *tok = token;
-    bool is_typedef;
-    Type *ty = basetype(&is_typedef);
+    StorageClass sclass;
+    Type *ty = basetype(&sclass);
     if(consume(";")) {
         return new_node(ND_NULL, tok);
     }
@@ -693,7 +709,7 @@ static Node *declaration() {
     ty = declarator(ty, &name);
     ty = type_suffix(ty);
 
-    if(is_typedef) {
+    if(sclass == TYPEDEF) {
         expect(";");
         push_scope(name)->type_def = ty;
         return new_node(ND_NULL, tok);
@@ -709,6 +725,7 @@ static Node *declaration() {
     }
 
     expect("=");
+
     Node *lhs = new_var_node(var, tok);
     Node *rhs = expr();
     expect(";");
@@ -731,7 +748,7 @@ static Node *read_expr_stmt() {
 static bool is_typename() {
     return peek("void") || peek("_Bool") || peek("char") || peek("short") ||
            peek("int") || peek("long") || peek("enum") || peek("struct") ||
-           peek("typedef") || find_typedef(token);
+           peek("typedef") || peek("static") || find_typedef(token);
 }
 
 static Node *stmt() {
