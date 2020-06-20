@@ -845,9 +845,16 @@ static Node *stmt2() {
     return node;
 }
 
-// expr = assign
+// expr = assign ("," assign)*
 static Node *expr() {
-    return assign();
+    Node *node = assign();
+    Token *tok;
+    while(tok = consume(",")) {
+        // ここでND_EXPR_STMTに入れておかないと必要以上にスタックに値が残ってしまう
+        node = new_unary(ND_EXPR_STMT, node, node->tok); 
+        node = new_binary(ND_COMMA, node, assign(), tok);
+    }
+    return node;
 }
 
 // assign = equality ("=" assign)?
