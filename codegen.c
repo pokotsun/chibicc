@@ -273,6 +273,14 @@ static void gen(Node *node) {
                 load(node->ty);
             }
             return;
+        case ND_NOT:
+            gen(node->lhs);
+            printf("  pop rax\n");
+            printf("  cmp rax, 0\n");
+            printf("  sete al\n");
+            printf("  movzb rax, al\n");
+            printf("  push rax\n");
+            return;
         case ND_IF: {
             int seq = labelseq++;
             if(node->els) {
