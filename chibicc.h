@@ -95,6 +95,7 @@ typedef enum {
 	ND_ADDR, // unary &
 	ND_DEREF, // unary *
 	ND_NOT, // !(not)
+	ND_BITNOT, // ~(bit not)
     ND_RETURN, // "return"
     ND_IF, // "if"
     ND_WHILE, // "while"
