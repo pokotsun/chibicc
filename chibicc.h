@@ -99,6 +99,8 @@ typedef enum {
 	ND_DEREF, // unary *
 	ND_NOT, // !(not)
 	ND_BITNOT, // ~(bit not)
+	ND_LOGAND, // &&
+	ND_LOGOR, // ||
     ND_RETURN, // "return"
     ND_IF, // "if"
     ND_WHILE, // "while"
