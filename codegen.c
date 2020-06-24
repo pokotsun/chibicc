@@ -1,6 +1,7 @@
 #include "chibicc.h"
 
 static int labelseq = 1; // ラベルのindex
+static int brkseq;
 static char *funcname;
 
 // 汎用レジスタの下1bitだけ
@@ -355,18 +356,26 @@ static void gen(Node *node) {
         }
 		case ND_WHILE: {
 			int seq = labelseq++;
+            int brk = brkseq;
+            brkseq = seq;
+
 			printf(".L.begin.%d:\n", seq);
 			gen(node->cond);
 			printf("  pop rax\n");
 			printf("  cmp rax, 0\n");
-			printf("  je  .L.end.%d\n", seq);
+			printf("  je  .L.break.%d\n", seq);
 			gen(node->then);
 			printf("  jmp .L.begin.%d\n", seq);
-			printf(".L.end.%d:\n", seq);
+			printf(".L.break.%d:\n", seq);
+
+            brkseq = brk;
 			return;
 	    }
 		case ND_FOR: {
 			int seq = labelseq++;
+            int brk = brkseq;
+            brkseq = seq;
+
 			if(node->init) {
 				gen(node->init);
 			}
@@ -375,14 +384,16 @@ static void gen(Node *node) {
 				gen(node->cond);
 				printf("  pop rax\n");
 				printf("  cmp rax, 0\n");
-				printf("  je  .L.end.%d\n", seq);
+				printf("  je  .L.break.%d\n", seq);
 			}
 			gen(node->then);
 			if(node->inc) {
 				gen(node->inc);
 			}
 			printf("  jmp  .L.begin.%d\n", seq);
-			printf(".L.end.%d:\n", seq);
+			printf(".L.break.%d:\n", seq);
+
+            brkseq = brk;
 			return;
 		}
         case ND_EXPR_STMT:
@@ -395,6 +406,12 @@ static void gen(Node *node) {
 			for(Node *n = node->body; n; n=n->next) {
 				gen(n);
 			}
+            return;
+        case ND_BREAK:
+            if(brkseq == 0) {
+                error_tok(node->tok, "stray break");
+            }
+            printf("  jmp .L.break.%d\n", brkseq);
             return;
         case ND_FUNCALL: {
             int nargs = 0;

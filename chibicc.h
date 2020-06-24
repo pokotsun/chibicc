@@ -106,6 +106,7 @@ typedef enum {
     ND_WHILE, // "while"
     ND_FOR, // "for"
     ND_BLOCK, // { ... }
+	ND_BREAK, // "break"
 	ND_FUNCALL, // Function call
     ND_EXPR_STMT, // Expression statement(式が評価されるが何もスタックに残さないようにする)
     ND_STMT_EXPR, // Statement expression 複数文が存在するが最後の文の結果だけstackに残す

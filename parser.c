@@ -833,6 +833,7 @@ static Node *stmt() {
 //      | "while" "(" expr ")" stmt
 //      | "for" "(" (expr? ";" | declaration) expr? ";" expr? ")" stmt
 //      | "{"  stmt "}"
+//      | "break" ";"
 //      | declaration
 //      | expr ";"
 static Node *stmt2() {
@@ -906,6 +907,11 @@ static Node *stmt2() {
 		node->body = head.next;
 		return node;
 	}
+
+    if(tok = consume("break")) {
+        expect(";");
+        return new_node(ND_BREAK, tok);
+    }
 
     if(is_typename()) {
         return declaration();
