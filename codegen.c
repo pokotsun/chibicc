@@ -2,6 +2,7 @@
 
 static int labelseq = 1; // ラベルのindex
 static int brkseq;
+static int contseq;
 static char *funcname;
 
 // 汎用レジスタの下1bitだけ
@@ -357,24 +358,27 @@ static void gen(Node *node) {
 		case ND_WHILE: {
 			int seq = labelseq++;
             int brk = brkseq;
-            brkseq = seq;
+            int cont = contseq;
+            brkseq = contseq = seq;
 
-			printf(".L.begin.%d:\n", seq);
+			printf(".L.continue.%d:\n", seq);
 			gen(node->cond);
 			printf("  pop rax\n");
 			printf("  cmp rax, 0\n");
 			printf("  je  .L.break.%d\n", seq);
 			gen(node->then);
-			printf("  jmp .L.begin.%d\n", seq);
+			printf("  jmp .L.continue.%d\n", seq);
 			printf(".L.break.%d:\n", seq);
 
             brkseq = brk;
+            contseq = cont;
 			return;
 	    }
 		case ND_FOR: {
 			int seq = labelseq++;
             int brk = brkseq;
-            brkseq = seq;
+            int cont = contseq;
+            brkseq = contseq = seq;
 
 			if(node->init) {
 				gen(node->init);
@@ -387,6 +391,7 @@ static void gen(Node *node) {
 				printf("  je  .L.break.%d\n", seq);
 			}
 			gen(node->then);
+            printf(".L.continue.%d:\n", seq);
 			if(node->inc) {
 				gen(node->inc);
 			}
@@ -394,6 +399,7 @@ static void gen(Node *node) {
 			printf(".L.break.%d:\n", seq);
 
             brkseq = brk;
+            contseq = cont;
 			return;
 		}
         case ND_EXPR_STMT:
@@ -412,6 +418,12 @@ static void gen(Node *node) {
                 error_tok(node->tok, "stray break");
             }
             printf("  jmp .L.break.%d\n", brkseq);
+            return;
+        case ND_CONTINUE:
+            if(contseq == 0) {
+                error_tok(node->tok, "stray continue");
+            }
+            printf("  jmp .L.continue.%d\n", contseq);
             return;
         case ND_FUNCALL: {
             int nargs = 0;
