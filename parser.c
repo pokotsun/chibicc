@@ -835,6 +835,8 @@ static Node *stmt() {
 //      | "{"  stmt "}"
 //      | "break" ";"
 //      | "continue" ";"
+//      | "goto" ident ";"
+//      | ident ":" stmt
 //      | declaration
 //      | expr ";"
 static Node *stmt2() {
@@ -917,6 +919,23 @@ static Node *stmt2() {
     if(tok = consume("continue")) {
         expect(";");
         return new_node(ND_CONTINUE, tok);
+    }
+
+    if(tok = consume("goto")) {
+        Node *node = new_node(ND_GOTO, tok);
+        node->label_name = expect_ident();
+        expect(";");
+        return node;
+    }
+
+    // label
+    if(tok = consume_ident()) {
+        if(consume(":")) {
+            Node *node = new_unary(ND_LABEL, stmt(), tok);
+            node->label_name = strndup(tok->str, tok->len);
+            return node;
+        }
+        token = tok;
     }
 
     if(is_typename()) {

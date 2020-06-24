@@ -108,6 +108,8 @@ typedef enum {
     ND_BLOCK, // { ... }
 	ND_BREAK, // "break"
 	ND_CONTINUE, // "continue"
+	ND_GOTO, // "goto"
+	ND_LABEL, // Labeled statement
 	ND_FUNCALL, // Function call
     ND_EXPR_STMT, // Expression statement(式が評価されるが何もスタックに残さないようにする)
     ND_STMT_EXPR, // Statement expression 複数文が存在するが最後の文の結果だけstackに残す
@@ -144,6 +146,9 @@ struct Node {
 	// Function call
 	char *funcname;
 	Node *args;
+
+	// Goto or labeled statement
+	char *label_name;
 
     Var *var; // 変数の時だけ使う
 	long val; // kindがND_NUMの場合のみ使う

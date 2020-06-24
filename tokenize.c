@@ -98,7 +98,7 @@ static char *starts_with_reserved(char *p) {
     static char *kw[] = {"return", "if", "else", "while", "for", "int", 
                          "char", "sizeof", "struct", "typedef", "short", 
                          "long", "void", "_Bool", "enum", "static", "break",
-                         "continue"};
+                         "continue", "goto"};
 
     for(int i=0; i<sizeof(kw) / sizeof(*kw); i++) {
         int len = strlen(kw[i]);
@@ -285,7 +285,7 @@ Token *tokenize() {
 
 		// Single-letter punctuator
 		// if(ispunct(*p)) {
-		if (strchr("+-*/()<>;={}[],*&.!~|^", *p)) {
+		if (strchr("+-*/()<>;={}[],*&.!~|^:", *p)) {
 			cur = new_token(TK_RESERVED, cur, p++, 1);
 			continue;
 		}
