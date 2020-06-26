@@ -265,6 +265,7 @@ static Node *stmt();
 static Node *stmt2();
 static Node *expr();
 static Node *assign();
+static Node *conditional();
 static Node *logor();
 static Node *logand();
 static Node *bitand();
@@ -1005,10 +1006,10 @@ static Node *expr() {
     return node;
 }
 
-// assign = logor (assign-op assign)?
+// assign = conditional (assign-op assign)?
 // assign-op = "=" | "+=" | "-=" | "*=" | "/=" | "<<=" | ">>="
 static Node *assign() {
-    Node *node = logor();
+    Node *node = conditional();
     Token *tok;
 
     if(tok=consume("=")) {
@@ -1044,6 +1045,20 @@ static Node *assign() {
         }
     }
     return node;
+}
+
+// conditional = logor ("?" expr ":" conditional)?
+static Node *conditional() {
+    Node *node = logor();
+    Token *tok = consume("?");
+    if(!tok) return node;
+
+    Node *ternary = new_node(ND_TERNARY, tok);
+    ternary->cond = node;
+    ternary->then = expr();
+    expect(":");
+    ternary->els = conditional();
+    return ternary;
 }
 
 // logor = logand ("||" logand)*
