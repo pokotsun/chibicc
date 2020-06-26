@@ -272,6 +272,7 @@ static Node *bitor();
 static Node *bitxor();
 static Node *equality();
 static Node *relational();
+static Node *shift();
 static Node *add();
 static Node *mul();
 static Node *cast();
@@ -1005,7 +1006,7 @@ static Node *expr() {
 }
 
 // assign = logor (assign-op assign)?
-// assign-op = "=" | "+=" | "-=" | "*=" | "/="
+// assign-op = "=" | "+=" | "-=" | "*=" | "/=" | "<<=" | ">>="
 static Node *assign() {
     Node *node = logor();
     Token *tok;
@@ -1018,6 +1019,12 @@ static Node *assign() {
     }
     if(tok = consume("/=")) {
         return new_binary(ND_DIV_EQ, node, assign(), tok);
+    }
+    if(tok = consume("<<=")) {
+        return new_binary(ND_SHL_EQ, node, assign(), tok);
+    }
+    if(tok = consume(">>=")) {
+        return new_binary(ND_SHR_EQ, node, assign(), tok);
     }
     if(tok = consume("+=")) {
         add_type(node);
@@ -1105,24 +1112,40 @@ static Node *equality() {
 	}
 }
 
-// relational = add ("<" add | "<=" add | ">" add | ">=" add)*
+// relational = shift ("<" shift | "<=" shift | ">" shift | ">=" shift)*
 static Node *relational() {
-	Node *node = add();
+	Node *node = shift();
 
     Token *tok;
 	while(true) {
 		if(tok = consume("<")) {
-			node = new_binary(ND_LT, node, add(), tok);
+			node = new_binary(ND_LT, node, shift(), tok);
 		} else if(tok = consume("<=")) {
-			node = new_binary(ND_LE, node, add(), tok);
+			node = new_binary(ND_LE, node, shift(), tok);
 		} else if(tok = consume(">")) {
-			node = new_binary(ND_LT, add(), node, tok);
+			node = new_binary(ND_LT, shift(), node, tok);
 		} else if(tok = consume(">=")) {
-			node = new_binary(ND_LE, add(), node, tok);
+			node = new_binary(ND_LE, shift(), node, tok);
 		} else {
 			return node;
 		}
 	}
+}
+
+// shift = add("<<" add | ">>" add)
+static Node *shift() {
+    Node *node = add();
+    Token *tok;
+    
+    while(true) {
+        if(tok = consume("<<")) {
+            node = new_binary(ND_SHL, node, add(), tok);
+        } else if(tok = consume(">>")) {
+            node = new_binary(ND_SHR, node, add(), tok);
+        } else {
+            return node;
+        }
+    }
 }
 
 static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
