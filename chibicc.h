@@ -11,6 +11,7 @@
 
 typedef struct Type Type;
 typedef struct Member Member;
+typedef struct Initializer Initializer;
 
 // 
 // tokenize.c
@@ -56,14 +57,26 @@ struct Var {
     int offset; // Offset from RBP based current func
 
     // Global variable
-    char *contents;
-    int cont_len;
+    Initializer *initializer;
 };
 
 typedef struct VarList VarList;
 struct VarList {
 	VarList *next;
 	Var *var;
+};
+
+// Global variable initializer. Global variables can be initialized
+// either by a constant expression or a pointer to another global variable.
+struct Initializer {
+    Initializer *next;
+
+    // Constant expression.
+    int sz;
+    long val;
+
+    // Reference to another global variable
+    char *label;
 };
 
 // 抽象構文木のノードの種類
