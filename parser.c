@@ -803,7 +803,26 @@ static Initializer *emit_struct_padding(Initializer *cur, Type *parent, Member *
     return new_init_zero(cur, end - start);
 }
 
-// gvar-initializer2 = conditional
+static void skip_excess_elements2() {
+    while(true) {
+        if(consume("{")) {
+            skip_excess_elements2();
+        } else {
+            assign();
+        }
+
+        if(consume_end()) return;
+        expect(",");
+    }
+}
+
+static void skip_excess_elements() {
+    expect(",");
+    warn_tok(token, "excess elements in initializer");
+    skip_excess_elements2();
+}
+
+// gvar-initializer2 = assign
 //                   | "{" (gvar-initializer2 ("," gvar-initializer)* ","?)? "}"
 static Initializer *gvar_initializer2(Initializer *cur, Type *ty) {
     Token *tok = token;
@@ -820,8 +839,8 @@ static Initializer *gvar_initializer2(Initializer *cur, Type *ty) {
             } while(i < limit && !peek_end() && consume(","));
         }
 
-        if(open) {
-            expect_end();
+        if(open && !consume_end()) {
+            skip_excess_elements();
         }
 
         // Set excess array elements to zero.
@@ -846,8 +865,8 @@ static Initializer *gvar_initializer2(Initializer *cur, Type *ty) {
                 mem = mem->next;
             } while(mem && !peek_end() && consume(","));
         }
-        if(open) {
-            expect_end();
+        if(open && !consume_end()) {
+            skip_excess_elements();
         }
 
         // Set excess struct elements to zero.
@@ -858,7 +877,7 @@ static Initializer *gvar_initializer2(Initializer *cur, Type *ty) {
     }
 
     bool open = consume("{");
-    Node *expr = conditional();
+    Node *expr = assign();
     if(open) {
         expect_end();
     }
@@ -1033,8 +1052,8 @@ static Node *lvar_initializer2(Node *cur, Var *var, Type *ty, Designator *desg) 
                 cur = lvar_initializer2(cur, var, ty->base, &desg2);
             } while(i < limit && !peek_end() && consume(","));
         }
-        if(open) {
-            expect_end();
+        if(open && !consume_end()) {
+            skip_excess_elements();
         }
 
         // Set excess array elements to zero.
@@ -1062,8 +1081,8 @@ static Node *lvar_initializer2(Node *cur, Var *var, Type *ty, Designator *desg) 
                 mem = mem->next;
             } while(mem && !peek_end() && consume(","));
         }
-        if(open) {
-            expect_end();
+        if(open && !consume_end()) {
+            skip_excess_elements();
         }
 
         // Set excess struct elements to zero.
