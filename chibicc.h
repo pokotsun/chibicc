@@ -68,7 +68,7 @@ struct VarList {
 };
 
 // Global variable initializer. Global variables can be initialized
-// either by a constant expression or a pointer to another global variable.
+// either by a constant expression or a pointer to another global variable with an addend.
 struct Initializer {
     Initializer *next;
 
@@ -78,6 +78,7 @@ struct Initializer {
 
     // Reference to another global variable
     char *label;
+    long addend;
 };
 
 // 抽象構文木のノードの種類

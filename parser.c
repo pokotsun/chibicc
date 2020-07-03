@@ -265,6 +265,7 @@ static Node *stmt();
 static Node *stmt2();
 static Node *expr();
 static long eval(Node *node);
+static long eval2(Node *node, Var **var);
 static long const_expr();
 static Node *assign();
 static Node *conditional();
@@ -774,9 +775,10 @@ static Initializer *new_init_val(Initializer *cur, int sz, int val) {
     return init;
 }
 
-static Initializer *new_init_label(Initializer *cur, char *label) {
+static Initializer *new_init_label(Initializer *cur, char *label, long addend) {
     Initializer *init = calloc(1, sizeof(Initializer));
     init->label = label;
+    init->addend = addend;
     cur->next = init;
     return init;
 }
@@ -824,6 +826,29 @@ static void skip_excess_elements() {
 
 // gvar-initializer2 = assign
 //                   | "{" (gvar-initializer2 ("," gvar-initializer)* ","?)? "}"
+//
+// A gvar-initializer represents an initialization expression for
+// a global variable. Since global variables are just mapped from
+// a file to memory before the control is passed to main(), their
+// contents have to be fixed at link-time. Therefore, you cannot
+// write an expression that needs to be initialized at run-time.
+// For example, the following global variable definition is illegal:
+//
+//  int foo = bar(void);
+//
+// If the above definition were legal, someone would have to call 
+// bar() before main(), but such initialization mechanism doesn't
+// exist in the C execution model.
+//
+// Only the following expressions are allowed in an initializer:
+//
+//  1. A constant such as a number or a string literal
+//  2. An address of another global variable with an optional addend
+//
+// It is obvious that we can embed (1) to an object file as static data.
+// (2) may not be obvious why that can result in static data, but
+// the linker supports an expression consisting of a label address
+// plus/minus an addend, so (2) is allowed.
 static Initializer *gvar_initializer2(Initializer *cur, Type *ty) {
     Token *tok = token;
 
@@ -901,20 +926,15 @@ static Initializer *gvar_initializer2(Initializer *cur, Type *ty) {
         expect_end();
     }
 
-    if(expr->kind == ND_ADDR) {
-        // 左辺が変数でないならおかしな値(numとか)
-        if(expr->lhs->kind != ND_VAR) {
-            error_tok(tok, "invalid initializer");
-        }
-        return new_init_label(cur, expr->lhs->var->name);
-    }
+    Var *var = NULL;
+    long addend = eval2(expr, &var);
 
-    // Arrayを指す変数の場合, labelとして処理する
-    if(expr->kind == ND_VAR && expr->var->ty->kind == TY_ARRAY) {
-        return new_init_label(cur, expr->var->name);
+    if(var) {
+        int scale = (var->ty->kind == TY_ARRAY)
+                    ? var->ty->base->size : var->ty->size;
+        return new_init_label(cur, var->name, addend * scale);
     }
-
-    return new_init_val(cur, ty->size, eval(expr));
+    return new_init_val(cur, ty->size, addend);
 }
 
 static Initializer *gvar_initializer(Type *ty) {
@@ -1368,13 +1388,23 @@ static Node *expr() {
     return node;
 }
 
-// Evaluate a given node as a constant expression.
 static long eval(Node *node) {
+    return eval2(node, NULL);
+}
+
+// Evaluate a given node as a constant expression.
+static long eval2(Node *node, Var **var) {
     switch(node->kind) {
         case ND_ADD:
             return eval(node->lhs) + eval(node->rhs);
+        case ND_PTR_ADD:
+            return eval2(node->lhs, var) + eval(node->rhs);
         case ND_SUB:
             return eval(node->lhs) - eval(node->rhs);
+        case ND_PTR_SUB:
+            return eval2(node->lhs, var) - eval(node->rhs);
+        case ND_PTR_DIFF:
+            return eval2(node->lhs, var) - eval2(node->rhs, var);
         case ND_MUL:
             return eval(node->lhs) * eval(node->rhs);
         case ND_DIV:
@@ -1411,6 +1441,18 @@ static long eval(Node *node) {
             return eval(node->lhs) || eval(node->rhs);
         case ND_NUM:
             return node->val;
+        case ND_ADDR:
+            if(!var || *var || node->lhs->kind != ND_VAR) {
+                error_tok(node->tok, "invalid initializer");
+            }
+            *var = node->lhs->var;
+            return 0;
+        case ND_VAR:
+            if(!var || *var || node->var->ty->kind != TY_ARRAY) {
+                error_tok(node->tok, "invalid initializer");
+            }
+            *var = node->var;
+            return 0;
     }
 
     error_tok(node->tok, "not a constant expression");

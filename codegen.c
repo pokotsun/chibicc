@@ -555,7 +555,7 @@ static void emit_data(Program *prog) {
         for(Initializer *init = var->initializer; init; init = init->next) {
             if(init->label) {
                 // .quad 64bitの数字を扱う時に使う(ほかは.byteと同じ)
-                printf("  .quad %s\n", init->label);
+                printf("  .quad %s%+ld\n", init->label, init->addend);
             } else if(init->sz == 1) {
                 printf("  .byte %ld\n", init->val);
             } else {
