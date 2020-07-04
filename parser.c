@@ -1246,6 +1246,7 @@ static Node *stmt() {
 //      | "break" ";"
 //      | "continue" ";"
 //      | "goto" ident ";"
+//      | ";"
 //      | ident ":" stmt
 //      | declaration
 //      | expr ";"
@@ -1374,6 +1375,10 @@ static Node *stmt2() {
         node->label_name = expect_ident();
         expect(";");
         return node;
+    }
+
+    if(tok = consume(";")) {
+        return new_node(ND_NULL, tok);
     }
 
     // label
