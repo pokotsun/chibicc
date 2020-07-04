@@ -596,6 +596,7 @@ static Type *struct_decl() {
         mem->offset = offset;
         offset += mem->ty->size;
 
+        // メンバ中最大のalignをもたせる
         if(ty->align < mem->ty->align) {
             ty->align = mem->ty->align;
         }
@@ -1868,6 +1869,7 @@ static Node *func_args() {
 //          | "(" expr ")" 
 //          | "sizeof" "(" type-name ")"
 //          | "sizeof" unary 
+//          | "_Alignof" "(" type-name ")"
 //          | ident func-args? 
 //          | str 
 //          | num
@@ -1902,6 +1904,13 @@ static Node *primary() {
             error_tok(node->tok, "incomplete type");
         }
         return new_num(node->ty->size, tok);
+    }
+
+    if(tok = consume("_Alignof")) {
+        expect("(");
+        Type *ty = type_name();
+        expect(")");
+        return new_num(ty->align, tok);
     }
 
     if(tok=consume_ident()) {
