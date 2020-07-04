@@ -290,12 +290,16 @@ static Node *postfix();
 // or a global variable by looking ahead input tokens.
 static bool is_function() {
     Token *tok = token;
+    bool isfunc = false;
 
     StorageClass sclass;
     Type *ty = basetype(&sclass);
-    char *name = NULL;
-    declarator(ty, &name);
-    bool isfunc = name && consume("(");
+
+    if(!consume(";")) {
+        char *name = NULL;
+        declarator(ty, &name);
+        isfunc = name && consume("(");
+    }
 
     // 読み進めてしまった分を元に戻す
     token = tok;
@@ -952,6 +956,9 @@ static Initializer *gvar_initializer(Type *ty) {
 static void global_var() {
     StorageClass sclass;
     Type *ty = basetype(&sclass);
+
+    if(consume(";")) return;
+
     char *name = NULL;
     Token *tok = token;
     ty = declarator(ty, &name);
