@@ -285,6 +285,7 @@ static Node *cast();
 static Node *primary();
 static Node *unary();
 static Node *postfix();
+static Node *compound_literal();
 
 // Determine whether the next top-level item is a function
 // or a global variable by looking ahead input tokens.
@@ -1732,10 +1733,12 @@ static Node *cast() {
         if(is_typename()) {
             Type *ty = type_name();
             expect(")");
-            Node *node = new_unary(ND_CAST, cast(), tok);
-            add_type(node->lhs);
-            node->ty = ty;
-            return node;
+            if(!consume("{")) {
+                Node *node = new_unary(ND_CAST, cast(), tok);
+                add_type(node->lhs);
+                node->ty = ty;
+                return node;
+            }
         }
         token = tok;
     }
@@ -1801,10 +1804,15 @@ static Node *struct_ref(Node *lhs) {
     return node;
 }
 
-// postfix = primary ("[" expr "]" | "." ident | "->" ident | "++" | "--")*
+// postfix = compound-literal
+//         | primary ("[" expr "]" | "." ident | "->" ident | "++" | "--")*
 static Node *postfix() {
-    Node *node = primary();
     Token *tok;
+
+    Node *node = compound_literal();
+    if(node) return node;
+
+    node = primary();
 
     while(true) {
         if(tok = consume("[")) {
@@ -1839,6 +1847,36 @@ static Node *postfix() {
 
         return node;
     }
+}
+
+// compound-literal = "(" type-name ")" "{" (gvar-initializer | lvar-initializer) "}"
+static Node *compound_literal() {
+    Token *tok = token;
+    if(!consume("(") || !is_typename()) {
+        token = tok;
+        return NULL;
+    }
+
+    Type *ty = type_name();
+    expect(")");
+
+    if(!peek("{")) {
+        token = tok;
+        return NULL;
+    }
+
+    // scopeに入っていない -> top level variable
+    if(scope_depth == 0) {
+        Var *var = new_gvar(new_label(), ty, true);
+        var->initializer = gvar_initializer(ty);
+        return new_var_node(var, tok);
+    }
+
+    // それ以外の場合はlocal variableとして扱う
+    Var *var = new_lvar(new_label(), ty);
+    Node *node = new_var_node(var, tok);
+    node->init = lvar_initializer(var, tok);
+    return node;
 }
 
 // stmt-expr = "(" "{" stmt+ "}" ")"
