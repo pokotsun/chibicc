@@ -1195,6 +1195,21 @@ static Node *declaration() {
         // In case void *x, its type is TY_PTR, so does not enter this scope
         error_tok(tok, "variable declared void");
     }
+
+    if(sclass == STATIC) {
+        // static local variable
+        Var *var = new_gvar(new_label(), ty, true);
+        push_scope(name)->var = var;
+
+        if(consume("=")) {
+            var->initializer = gvar_initializer(ty);
+        } else if(ty->is_incomplete) {
+            error_tok(tok, "incomplete type");
+        }
+        consume(";");
+        return new_node(ND_NULL, tok);
+    }
+
     Var *var = new_lvar(name, ty);
 
     if(consume(";")) {
@@ -1467,7 +1482,8 @@ static long eval2(Node *node, Var **var) {
         case ND_NUM:
             return node->val;
         case ND_ADDR:
-            if(!var || *var || node->lhs->kind != ND_VAR) {
+            // constant expressionに対してだから, localな変数に対するアドレスでもinvalid
+            if(!var || *var || node->lhs->kind != ND_VAR || node->lhs->var->is_local) {
                 error_tok(node->tok, "invalid initializer");
             }
             *var = node->lhs->var;
