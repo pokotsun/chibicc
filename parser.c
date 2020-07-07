@@ -214,8 +214,9 @@ static Var *new_lvar(char *name, Type *ty) {
     return var;
 }
 
-static Var *new_gvar(char *name, Type *ty, bool emit) {
+static Var *new_gvar(char *name, Type *ty, bool is_static, bool emit) {
     Var *var = new_var(name, ty, false);
+    var->is_static = is_static;
     push_scope(name)->var = var;
 
     if(emit) {
@@ -746,7 +747,7 @@ static Function *function() {
     ty = declarator(ty, &name);
 
     // Add a function type to the scope
-    new_gvar(name, func_type(ty), false);
+    new_gvar(name, func_type(ty), false, false);
 
     // Construct a function object
     Function *fn = calloc(1, sizeof(Function));
@@ -973,7 +974,7 @@ static void global_var() {
     }
 
     // EXTERN classでなければ, global変数としてスコープに入れる
-    Var *var = new_gvar(name, ty, sclass != EXTERN);
+    Var *var = new_gvar(name, ty, sclass == STATIC, sclass != EXTERN);
 
     // 初期化されないglobal変数の場合
     if(sclass == EXTERN) {
@@ -1199,7 +1200,7 @@ static Node *declaration() {
 
     if(sclass == STATIC) {
         // static local variable
-        Var *var = new_gvar(new_label(), ty, true);
+        Var *var = new_gvar(new_label(), ty, true, true);
         push_scope(name)->var = var;
 
         if(consume("=")) {
@@ -1252,7 +1253,7 @@ static Node *stmt() {
     return node;
 }
 
-// stmt2 = "return" expr ";"
+// stmt2 = "return" expr? ";"
 //      | "if" "(" expr ")" stmt ("else" stmt)?
 //      | "switch" "(" expr ")" stmt
 //      | "case" const-expr ":" stmt
@@ -1270,6 +1271,8 @@ static Node *stmt() {
 static Node *stmt2() {
     Token *tok;
     if(tok = consume("return")) {
+        if(consume(";")) return new_node(ND_RETURN, tok);
+
         Node *node = new_unary(ND_RETURN, expr(), tok);
         expect(";");
         return node;
@@ -1867,7 +1870,7 @@ static Node *compound_literal() {
 
     // scopeに入っていない -> top level variable
     if(scope_depth == 0) {
-        Var *var = new_gvar(new_label(), ty, true);
+        Var *var = new_gvar(new_label(), ty, true, true);
         var->initializer = gvar_initializer(ty);
         return new_var_node(var, tok);
     }
@@ -2008,7 +2011,7 @@ static Node *primary() {
         token = token->next;
 
         Type *ty = array_of(char_type, tok->cont_len);
-        Var *var = new_gvar(new_label(), ty, true);
+        Var *var = new_gvar(new_label(), ty, true, true);
         var->initializer = gvar_init_string(tok->contents, tok->cont_len);
         return new_var_node(var, tok);
     }

@@ -58,6 +58,7 @@ Tree *tree = &(Tree){
 
 extern int ext1;
 extern int *ext2;
+static int ext3 = 3;
 
 int;
 struct {char a; int b;};
@@ -113,6 +114,8 @@ int fib(int x) {
     if(x<=1) return 1;
     return fib(x-1) + fib(x-2);
 }
+
+void ret_none() { return; }
 
 static int static_fn() { return 3; }
 int param_decay(int x[]) { return x[0]; }
@@ -667,6 +670,10 @@ int main() {
     assert(2, tree->lhs->val, "tree->lhs->val");
     assert(3, tree->lhs->lhs->val, "tree->lhs->lhs->val");
     assert(4, tree->lhs->rhs->val, "tree->lhs->rhs->val");
+
+    ret_none();
+
+    assert(3, ext3, "ext3");
 
     printf("OK\n");
     return 0;

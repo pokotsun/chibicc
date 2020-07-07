@@ -534,9 +534,12 @@ static void gen(Node *node) {
             return;
         }
         case ND_RETURN:
-            gen(node->lhs);
-            // raxにpopしてから呼び出し元に戻る
-            printf("  pop rax\n");
+            // 左辺が存在する場合のみ, raxに返り値をpopする
+            if(node->lhs) {
+                gen(node->lhs);
+                // raxにpopしてから呼び出し元に戻る
+                printf("  pop rax\n");
+            }
             printf("  jmp .L.return.%s\n", funcname);
             return;
         case ND_CAST:
@@ -553,6 +556,13 @@ static void gen(Node *node) {
 
 // set global data
 static void emit_data(Program *prog) {
+    for(VarList *vl = prog->globals; vl; vl=vl->next) {
+        if(!vl->var->is_static) {
+            // global directive variable is able to access from other files.
+            printf(".global %s\n", vl->var->name);
+        }
+    }
+
     // change the current section to .bss
     printf(".bss\n");
 

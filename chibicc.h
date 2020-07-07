@@ -58,6 +58,7 @@ struct Var {
     int offset; // Offset from RBP based current func
 
     // Global variable
+    bool is_static;
     Initializer *initializer;
 };
 
