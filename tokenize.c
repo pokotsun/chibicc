@@ -111,7 +111,7 @@ static char *starts_with_reserved(char *p) {
     // Multi letter punctuator
     static char *ops[] = {"<<=", ">>=", "==", "!=", "<=", ">=", "->", 
                           "++", "--", "<<", ">>", "+=", "-=", "*=", 
-                          "/=", "&&", "||"};
+                          "/=", "&&", "||", "&=", "|=", "^="};
 
     for(int i=0; i<sizeof(ops) / sizeof(*ops); i++) {
         if(startswitch(p, ops[i])) {
