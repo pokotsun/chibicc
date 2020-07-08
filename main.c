@@ -1,7 +1,5 @@
 #include "chibicc.h"
 
-Token *token;
-
 // Returns the contents of a given file.
 static char *read_file(char *path) {
 	// Open and read the file
