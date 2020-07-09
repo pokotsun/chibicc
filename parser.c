@@ -349,6 +349,7 @@ static Type *basetype(StorageClass *sclass) {
         INT = 1 << 8,
         LONG = 1 << 10,
         OTHER = 1 << 12,
+        SIGNED = 1 << 13,
     };
 
     Type *ty = int_type;
@@ -383,7 +384,8 @@ static Type *basetype(StorageClass *sclass) {
 
         // Handle user-defined types.
         if(!peek("void") && !peek("_Bool") && !peek("char") &&
-           !peek("short") && !peek("int") && !peek("long")) {
+           !peek("short") && !peek("int") && !peek("long") &&
+           !peek("signed")) {
             if(counter) break;
 
             if(peek("struct")) {
@@ -403,21 +405,18 @@ static Type *basetype(StorageClass *sclass) {
         // Handle built-in types.
         if(consume("void")) {
             counter += VOID;
-        }
-        if(consume("_Bool")) {
+        } else if(consume("_Bool")) {
             counter += BOOL;
-        }
-        if(consume("char")) {
+        } else if(consume("char")) {
             counter += CHAR;
-        }
-        if(consume("short")) {
+        } else if(consume("short")) {
             counter += SHORT;
-        }
-        if(consume("int")) {
+        } else if(consume("int")) {
             counter += INT;
-        }
-        if(consume("long")) {
+        } else if(consume("long")) {
             counter += LONG;
+        } else if(consume("signed")) {
+            counter |= SIGNED;
         }
 
         switch(counter) {
@@ -428,19 +427,28 @@ static Type *basetype(StorageClass *sclass) {
                 ty = bool_type;
                 break;
             case CHAR:
+            case SIGNED + CHAR:
                 ty = char_type;
                 break;
             case SHORT:
             case SHORT + INT:
+            case SIGNED + SHORT:
+            case SIGNED + SHORT + INT:
                 ty = short_type;
                 break;
             case INT:
+            case SIGNED:
+            case SIGNED + INT:
                 ty = int_type;
                 break;
             case LONG:
             case LONG + INT:
             case LONG + LONG:
             case LONG + LONG + INT:
+            case SIGNED + LONG:
+            case SIGNED + LONG + INT:
+            case SIGNED + LONG + LONG:
+            case SIGNED + LONG + LONG + INT:
                 ty = long_type;
                 break;
             default:
@@ -1250,7 +1258,7 @@ static bool is_typename() {
     return peek("void") || peek("_Bool") || peek("char") || peek("short") ||
            peek("int") || peek("long") || peek("enum") || peek("struct") ||
            peek("typedef") || peek("static") || peek("extern") ||
-           find_typedef(token);
+           peek("signed") || find_typedef(token);
 }
 
 static Node *stmt() {
