@@ -67,5 +67,6 @@ expand main.c
 expand type.c
 expand parser.c
 expand codegen.c
+expand tokenize.c
 
 gcc -static -o chibicc-gen2 $TMP/*.o
