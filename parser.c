@@ -2013,6 +2013,8 @@ static Node *primary() {
                     error_tok(tok, "not a function");
                 }
                 node->ty = sc->var->ty->return_ty;
+            } else if(!strcmp(node->funcname, "__builtin_va_start")) { 
+                node->ty = void_type;
             } else { // まだ宣言されてない関数の宣言は返り値をintと仮定
                 warn_tok(node->tok, "implicit declaration of a function");
                 node->ty = int_type;
