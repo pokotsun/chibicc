@@ -188,12 +188,14 @@ static Token *read_char_literal(Token *cur, char *start) {
 
     Token *tok = new_token(TK_NUM, cur, start, p - start);
     tok->val = c;
+    tok->ty = int_type;
     return tok; 
 }
 
 static Token *read_int_literal(Token *cur, char *start) {
     char *p = start;
 
+    // Read a binary, octal, decimal or hexadecimal number
     int base;
     // 文字の大文字小文字関係なく比較 
     if(!strncasecmp(p, "0x", 2) && is_alnum(p[2])) {
@@ -210,12 +212,26 @@ static Token *read_int_literal(Token *cur, char *start) {
     
     // 数字の読み出し
     long val = strtol(p, &p, base);
+    Type *ty = int_type;
+
+    // Read L or LL prefix or infer a type
+    if(startswitch(p, "LL") || startswitch(p, "ll")) {
+        p += 2;
+        ty = long_type;
+    } else if(*p == 'L' || *p == 'l') {
+        p++;
+        ty = long_type;
+    } else if(val != (int)val) {
+        ty = long_type;
+    }
+
     if(is_alnum(*p)) {
         error_at(p, "invalid digit");
     }
 
     Token *tok = new_token(TK_NUM, cur, start, p - start);
     tok->val = val;
+    tok->ty = ty;
     return tok;
 }
 

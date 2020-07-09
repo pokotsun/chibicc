@@ -125,17 +125,6 @@ static void expect(char *s) {
 	token = token->next;
 }
 
-// 次のトークンが数値の場合, トークンを1つ読み進めてその数値を返す.
-// それ以外の場合にはエラーを報告する.
-static int expect_number() {
-	if(token->kind != TK_NUM) {
-        error_tok(token, "expected a number");
-	}
-	int val = token->val;
-	token = token->next;
-	return val;
-}
-
 // Ensure that the current token is TK_IDENT.
 // and return TK_IDENT name.
 static char *expect_ident() {
@@ -175,6 +164,7 @@ static Node *new_unary(NodeKind kind, Node *expr, Token *tok) {
 static Node *new_num(int val, Token *tok) {
     Node *node = new_node(ND_NUM, tok);
 	node->val = val;
+    node->ty = int_type;
 	return node;
 }
 
@@ -2057,5 +2047,10 @@ static Node *primary() {
     if(tok->kind != TK_NUM) {
         error_tok(tok, "expected expression");
     }
-	return new_num(expect_number(), tok);
+
+    token = tok->next;
+
+    Node *node = new_num(tok->val, tok);
+    node->ty = tok->ty;
+    return node;
 }

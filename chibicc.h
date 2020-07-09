@@ -34,6 +34,7 @@ struct Token {
 	TokenKind kind; // token type
 	Token *next; // next input token
 	int val; // kindがTK_NUMの場合, その数値
+	Type *ty; // used if TK_NUM
 	char *str; // トークン文字列
 	int len; // トークンの長さ
 
